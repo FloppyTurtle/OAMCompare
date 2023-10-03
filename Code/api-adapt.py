@@ -1,11 +1,12 @@
-import h5py, os, platform
+import h5py, os, platform, subprocess
+import imageio.v2 as imageio
 from openpmd_viewer import OpenPMDTimeSeries
+import matplotlib
+#matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
-import openpmd_api as io
-import subprocess
 
 class fbpic:
-    def __init__(self, relativeInputPath = ""):
+    def __init__(self, relativeInputPath = "") -> None:
         ## Find what platform we are on necessary for saving files
         self.platform = platform.system()
         if not relativeInputPath:
@@ -32,10 +33,11 @@ class fbpic:
         self.ts.slider()
         plt.show()
 
-    def saveFigures(self, outDir:"CWD/outdir"="results",
-                     iterations:"SPecific iteratations" = [],
-                     fields:"Specific fields"=[],
-                     particles:"Specific particles"=[]):
+    def saveFigures(self, outDir: str="results",
+                     iterations: list[int]= [],
+                     fields: list[str]=[],
+                     particles:list[str]=[],
+                     coord: str = "x") -> None:
         
         ## Create the result directory
         if not(os.path.exists(self.cwd+"/"+outDir)):
@@ -54,46 +56,72 @@ class fbpic:
 
         ## Same function but one for linux and one for windows since the address
         ## method is different for each operating system
+        print("Starting write to file")
         if self.platform == "Linux" or self.platform == "linux":
             for field_iter in fields:
                 fileList = []
+                print(("Field {} saved.").format(field_iter))
                 for iter in iterations: 
                     plt.clf()
                     plt.gcf()
-                    var, var_info = self.ts.get_field(iteration=iter,field =  field_iter,slice_across=["z"])
-                    plt.colorbar()
-                    fileList.append(self.liSave(outDir,iter,field_iter,dpi=300))
+                    self.ts.get_field(iteration=iter,field =  field_iter,coord = "x",plot=True)
+                    fileList.append(self.liSave(outDir,iter,field_iter,coord,dpi=300))
+                
+                self.itgLi(fileList,outDir,("{}_{}:gif.gif").format(field_iter,coord),fps= 2) 
 
+        
         elif self.platform == "Windows" or self.platform == "windows":
             for field_iter in fields:
                 fileList = []
+                print(("Field {} saved.").format(field_iter))
                 for iter in iterations: 
                     plt.clf()
                     plt.gcf()
-                    var, var_info = self.ts.get_field(iteration=iter,field =  field_iter,slice_across=["z"])
-                    plt.colorbar()
-                    fileList.append(self.liSave(outDir,iter,field_iter,dpi=300))
-
+                    self.ts.get_field(iteration=iter,field =  field_iter,slice_across=["z"],plot=True)
+                    fileList.append(self.winSave(outDir,iter,field_iter,coord,dpi=300))
+                
+                self.itgWin(fileList,outDir,field_iter+"_"+iter+"_1st_try.gif",fps= 2) 
                     
 
-    def itg(self,fps = 1):
-        pass
+    def itgLi(self,fileList: list[str],outDir: str,name: str="efault_field_B_timelapt.gif",fps: int = 1) -> None:
+        ## Create a gif folder in the result directory
+        if not(os.path.exists(("./{}/gifs").format(outDir))):
+            subprocess.run(["mkdir", "./{}/gifs".format(outDir)])
+
+        
+        with imageio.get_writer(("./{}/gifs/{}").format(outDir,name),mode='I',fps=fps) as writer:
+            for nameOfFile in fileList:
+                image = imageio.imread(nameOfFile)
+                writer.append_data(image)
+
+    def itgWin(self,fileList: list[str],outDir: str,name: str="efault_field_B_timelapt.gif",fps: int = 1) -> None:
+        ## Creating a gif folder in the results directory
+        if not(os.path.exists(("{}\\{}\\{}\\gifs").format(self.cwd,self.cwd,outDir))):
+            subprocess.run(["mkdir", ("{}\\{}\\{}\\gifs").format(self.cwd,self.cwd,outDir)])
+        
+        with imageio.get_writer(("{}\\{}\\gifs\\{}").format(self.cwd,outDir,name),mode='I',fps=fps) as writer:
+            for nameOfFile in fileList:
+                image = imageio.imread(nameOfFile)
+                writer.append_data(image)
 
     ## Linux save function using the correct file notation
-    def liSave(self,outDir,iter,field_iter,dpi):
-        path = "./"+outDir+"/iter:"+iter+":"+field_iter+".png"
-        plt.savefig(path, dpi=300)
+    def liSave(self,outDir: str,iter: int,field_iter: str,coord: str,dpi: int=300) -> str:
+        ## Save figure in linux
+        path = ("./{}/iter:{}:{}{}.png").format(outDir,iter.item(),field_iter,coord)
+        plt.savefig(path, dpi=dpi)
         return path
     
     ## Windows save notation using the correct notation
-    def winSave(self,outDir,iter,field_iter,dpi):
-        path = self.cwd+"\\"+outDir+"\\iter:"+iter+":"+field_iter+".png"
-        plt.savefig(path, dpi=300)
+    def winSave(self,outDir: str,iter:int ,field_iter: str,coord: str,dpi=300):
+        ## Save figure in windows
+        path = "{}\\{}\\iter:{}:{}{}.png".format(self.cwd,outDir,iter,field_iter,coord)
+        plt.savefig(path, dpi=dpi)
         return path
 
 series = fbpic()
 series.listFields()
-#series.slider()
+series.saveFigures()
+
 
 """ for iter in it: 
     rho, info_rho = ts.get_field( iteration=iter, field='rho',plot=True )
