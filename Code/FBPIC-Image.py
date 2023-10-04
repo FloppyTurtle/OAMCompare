@@ -125,7 +125,7 @@ class fbpic:
 
 series = fbpic()
 series.listFields()
-series.saveFigures()
+series.saveFigures(outDir="Basic_LWFA")
 
 
 """ for iter in it: 
