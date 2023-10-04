@@ -125,7 +125,8 @@ class fbpic:
 
 series = fbpic()
 series.listFields()
-series.saveFigures(outDir="Basic_LWFA")
+outDir = str(input("Enter a output directory for this run  :"))
+series.saveFigures(outDir=outDir,coord="y")
 
 
 """ for iter in it: 

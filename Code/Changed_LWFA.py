@@ -46,10 +46,10 @@ use_cuda = True
 n_order = -1
 
 # The simulation box
-Nz = 800         # Number of gridpoints along z
+Nz = 2000         # Number of gridpoints along z
 zmax = 30.e-6    # Right end of the simulation box (meters)
-zmin = -10.e-6   # Left end of the simulation box (meters)
-Nr = 50          # Number of gridpoints along r
+zmin = -30.e-6   # Left end of the simulation box (meters)
+Nr = 200          # Number of gridpoints along r
 rmax = 20.e-6    # Length of the box along r (meters)
 Nm = 2           # Number of modes used
 
