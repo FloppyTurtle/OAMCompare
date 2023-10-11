@@ -24,6 +24,7 @@ from scipy.constants import c, e, m_e
 from fbpic.main import Simulation
 from fbpic.lpa_utils.laser import add_laser_pulse
 from fbpic.lpa_utils.laser.laser_profiles import GaussianLaser
+from fbpic.lpa_utils.laser.laser_profiles import DonutLikeLaguerreGaussLaser
 from fbpic.openpmd_diag import FieldDiagnostic, ParticleDiagnostic, \
      set_periodic_checkpoint, restart_from_checkpoint
 
@@ -32,7 +33,7 @@ from fbpic.openpmd_diag import FieldDiagnostic, ParticleDiagnostic, \
 # ----------
 
 # Whether to use the GPU
-use_cuda = True
+use_cuda = False
 
 # Order of the stencil for z derivatives in the Maxwell solver.
 # Use -1 for infinite order, i.e. for exact dispersion relation in
@@ -46,10 +47,10 @@ use_cuda = True
 n_order = -1
 
 # The simulation box
-Nz = 2000         # Number of gridpoints along z
+Nz = 300        # Number of gridpoints along z
 zmax = 30.e-6    # Right end of the simulation box (meters)
 zmin = -30.e-6   # Left end of the simulation box (meters)
-Nr = 200          # Number of gridpoints along r
+Nr = 150         # Number of gridpoints along r
 rmax = 20.e-6    # Length of the box along r (meters)
 Nm = 2           # Number of modes used
 
@@ -65,19 +66,15 @@ p_nz = 2         # Number of particles per cell along z
 p_nr = 2         # Number of particles per cell along r
 p_nt = 4         # Number of particles per cell along theta
 
-# The laser
-a0 = 4.          # Laser amplitude
-w0 = 5.e-6       # Laser waist
-tau = 16.e-15     # Laser duration
-z0 = 15.e-6      # Laser centroid
+
 
 # The moving window
 v_window = c       # Speed of the window
 
 # The diagnostics and the checkpoints/restarts
-diag_period = 50         # Period of the diagnostics in number of timesteps
+diag_period = 50         # Period of the diagnostics in number of timesteps  ## Default 50
 save_checkpoints = False # Whether to write checkpoint files
-checkpoint_period = 100  # Period for writing the checkpoints
+checkpoint_period = 100  # Period for writing the checkpoints   ##Default 100
 use_restart = False      # Whether to restart from a previous checkpoint
 track_electrons = False  # Whether to track and write particle ids
 
@@ -96,7 +93,7 @@ def dens_func( z, r ) :
     return(n)
 
 # The interaction length of the simulation (meters)
-L_interact = 50.e-6 # increase to simulate longer distance!
+L_interact = 50.e-6 # increase to simulate longer distance!  ##Default is 50
 # Interaction time (seconds) (to calculate number of PIC iterations)
 T_interact = ( L_interact + (zmax-zmin) ) / v_window
 # (i.e. the time it takes for the moving window to slide across the plasma) 
@@ -127,19 +124,30 @@ if __name__ == '__main__':
     ## Original laser profile
     ##
     # Create a Gaussian laser profile
-    ## laser_profile = GaussianLaser(a0, w0, tau, z0)
-    # Add the laser to the fields of the simulation
-    ##add_laser_pulse( sim, laser_profile)
-    
-    ## Sircularly polarised (their example)
-    w0 = 5.e-6; z0 = 3.e-6; tau = 30.e-15; a0 = 1
-    linear_profile1 = GaussianLaser( a0/math.sqrt(2), w0, tau, z0,
-                            theta_pol=0., cep_phase=0. )
-    linear_profile2 = GaussianLaser( a0/math.sqrt(2), w0, tau, z0,
-                            theta_pol=math.pi/2, cep_phase=math.pi/2 )
 
-    circular_profile = linear_profile1 + linear_profile2
-    add_laser_pulse( sim, circular_profile )
+    # The laser
+    #a0 = 4.          # Laser amplitude
+    #w0 = 5.e-6       # Laser waist
+    #tau = 16.e-15     # Laser duration
+    #z0 = 15.e-6      # Laser centroid
+
+    w0 = 5.e-6; z0 = 3.e-6; tau = 40.e-15; a0 = 5
+    """laser_profile = GaussianLaser(a0, w0, tau, z0)
+    add_laser_pulse( sim,laser_profile)
+"""
+    donut_laser_profile = DonutLikeLaguerreGaussLaser(0, 0, a0, w0, tau, 0, zf=70.e6)
+    add_laser_pulse(sim, donut_laser_profile)
+
+    ## Circularly polarised (their example)
+    # linear_profile1 = GaussianLaser( a0/math.sqrt(2), w0, tau, z0,
+    #                         theta_pol=0., cep_phase=0. )
+    # linear_profile2 = GaussianLaser( a0/math.sqrt(2), w0, tau, z0,
+    #                         theta_pol=math.pi/2, cep_phase=math.pi/2 )
+
+    # circular_profile = linear_profile1 + linear_profile2
+    # add_laser_pulse( sim, circular_profile )
+
+   
     
 
     if use_restart is False:
@@ -151,19 +159,21 @@ if __name__ == '__main__':
         restart_from_checkpoint( sim )
 
     # Configure the moving window
+
     sim.set_moving_window( v=v_window )
 
     # Add diagnostics
     sim.diags = [ FieldDiagnostic( diag_period, sim.fld, comm=sim.comm ),
                   ParticleDiagnostic( diag_period, {"electrons" : elec},
-                    select={"uz" : [1., None ]}, comm=sim.comm ) ]
+                    select={"uz" : [1., None ]}, comm=sim.comm, particle_data=["gamma","momentum"] ) ]
 
     # Add checkpoints
     if save_checkpoints:
         set_periodic_checkpoint( sim, checkpoint_period )
 
     # Number of iterations to perform
-    N_step = int(T_interact/sim.dt)
+    N_step = 1000
+    #N_step = int(T_interact/sim.dt)
 
     ### Run the simulation
     sim.step( N_step )

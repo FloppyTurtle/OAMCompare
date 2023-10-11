@@ -1,0 +1,231 @@
+import h5py, os, platform, subprocess
+import imageio.v2 as imageio
+from openpmd_viewer import OpenPMDTimeSeries
+import matplotlib
+matplotlib.use('TkAgg')
+import matplotlib.pyplot as plt
+from matplotlib import cm
+import matplotlib.cbook as cbook
+import matplotlib.colors as colors
+import numpy as np
+
+class fbpic:
+    def __init__(self, relativeInputPath = "/diags/hdf5") -> None:
+        ## Find what platform we are on necessary for saving files
+        self.platform = platform.system()
+        if not relativeInputPath:
+            if self.platform == "Linux":
+                relativeInputPath = "/diags/hdf5"
+            elif self.platform == "Windows":
+                relativeInputPath = "\\diags\\hdf5"
+
+        ## Get the data input path and set it
+        self.cwd = os.getcwd()
+        self.inputDataPath =  self.cwd + relativeInputPath
+        self.relativeInputPath = relativeInputPath
+
+        self.ts = OpenPMDTimeSeries(self.inputDataPath)
+        self.it = self.ts.iterations
+        self.time_it = self.ts.t
+        self.size = self.it.size
+        print("The following iterations are found in the data folder :{}".format(self.it))
+        data, data_info = self.ts.get_field(field=self.ts.avail_fields[0],coord="x",iteration = self.it[0])
+        self.dims = np.shape(np.array(data))
+
+    ## List all avaliable fields
+    def listFields(self):
+        print(self.ts.avail_fields)
+
+    ## This only seems to work in Juypter and not on my linux setup
+    def slider(self):
+        self.ts.slider()
+        plt.show()
+
+    def electronEnergy(self,iteration=[550]):
+        plt.clf()
+        plt.gcf()
+        electronG = np.array(self.ts.get_particle(var_list = ["gamma"], iteration=iteration))
+        electronW = np.array(self.ts.get_particle(var_list = ["w"], iteration=iteration))
+        electronZ = np.array(self.ts.get_particle(var_list = ["z"], iteration=iteration))
+
+        ##print(electronG.shape)
+        ##print(electronW.shape)
+        ##print(electronZ.shape)
+
+        ##print(self.ts.avail_record_components)
+
+        fig, ax = plt.subplots()
+        data_array, xedges, yedges, quadmesh,  = ax.hist2d(electronZ[0], electronG[0], weights = electronW[0], bins=(self.dims[1],self.dims[0]))
+        ax.ticklabel_format(axis = "x", style = "sci", scilimits = (-6,-6), useMathText = True)
+        ax.set_xlabel("Z position (m)")
+        ax.set_ylabel("Energy ($m_0c^2$)")
+        time = self.time_it[np.where(self.it == iteration[0])[0][0]]
+        plt.title("Gamma in the mode {} at {}{} (iteration {})".format("all",np.round(time*10**15,1),"$e^{-15}$",iteration[0]))
+
+
+    def saveFigures(self, outDir: str="results",
+                     iterations: list[int]= [],
+                     fields: list[str]=[],
+                     particles:list[str]=[],
+                     coords: list[str] = ["x"], 
+                     fps:int = 2) -> None:
+        
+        ## Create the result directory
+        if self.platform == "Linux" or self.platform == "linux":
+            if not(os.path.isdir(self.cwd+"/"+outDir)):
+                subprocess.run(["mkdir", outDir])
+        else:
+            if not(os.path.isdir(self.cwd+"\\"+outDir)):
+                os.mkdir(self.cwd+"\\"+outDir)
+                               
+
+        ## Assign the lists to the ones avaliable
+        if not iterations:
+            iterations = self.it
+
+        if not fields:
+            fields = self.ts.avail_fields
+
+        if not particles:
+            particles = self.ts.avail_species
+
+
+        ## Same function but one for linux and one for windows since the address
+        ## method is different for each operating system
+        print("Starting write to file")
+        if self.platform == "Linux" or self.platform == "linux":
+            for field_iter in fields:
+                print("field  :{}".format(field_iter))
+                if field_iter == "rho" or field_iter == "J":
+                    for coord in ["x"]:
+                        print("coord :{}".format(coord))
+                        fileList = []
+                        for iter in iterations: 
+                            fileList.append(self.saveFig(iter, field_iter, coord, outDir)) 
+                        
+                        self.itgLi(fileList,outDir,("{}_{}:gif.gif").format(field_iter,coord),fps) 
+                else:
+                    for coord in coords:
+                        print("coord :{}".format(coord))
+                        fileList = []
+                        for iter in iterations: 
+                            fileList.append(self.saveFig(iter, field_iter, coord, outDir)) 
+                        
+                        self.itgLi(fileList,outDir,("{}_{}:gif.gif").format(field_iter,coord),fps) 
+            
+            fileList = []
+            for iter in iterations:
+                self.electronEnergy(iteration=[iter])
+                self.liSaveEnergy(outDir, iter)
+            self.itgLi(fileList, outDir,("{}_energy:gif.gif").format(outDir))
+
+        elif self.platform == "Windows" or self.platform == "windows":
+            for field_iter in fields:
+                print("field  :{}".format(field_iter))
+                if field_iter == "rho" or field_iter == "J":
+                    for coord in ["x"]:
+                        print("coord :{}".format(coord))
+                        fileList = []
+                        for iter in iterations: 
+                            fileList.append(self.saveFig(iter, field_iter, coord, outDir)) 
+                        
+                        self.itgWin(fileList,outDir,("{}_{}-gif.gif").format(field_iter,coord),fps) 
+                else:
+                    for coord in coords:
+                        print("coord :{}".format(coord))
+                        fileList = []
+                        for iter in iterations: 
+                            fileList.append(self.saveFig(iter, field_iter, coord, outDir)) 
+                        
+                        self.itgWin(fileList,outDir,("{}_{}-gif.gif").format(field_iter,coord),fps) 
+            
+            fileList = []
+            for iter in iterations:
+                self.electronEnergy(iteration=[iter])
+                fileList.append(self.winSaveEnergy(outDir, iter))
+            self.itgWin(fileList, outDir,("{}_energy_gif.gif").format(outDir))
+
+
+    def saveFig(self,iter,field_iter,coord,outDir):
+        plt.clf()
+        plt.gcf()    
+        self.ts.get_field(iteration=iter, field = field_iter, coord = coord, plot=True)
+        """fig, ax = plt.subplots(1,1)
+        field = np.log(field+1.e16)
+        pcm = ax.pcolormesh(field, shading="auto")
+        print(field_info.axes)
+        ##ax.set_xlim(left = field_info.zmin, right = field_info.zmax)
+        ##ax.set_ylim(bottom = field_info.rmin, top = field_info.rmax)
+
+        ax.set_xticklabels(np.round(np.linspace(field_info.zmin, field_info.zmax,num=10),6))
+        fig.colorbar(pcm, ax=ax, extend="max")  """
+        if self.platform == "Linux" or self.platform == "linux":
+            return self.liSave(outDir,iter,field_iter,coord,dpi=300)
+        else:
+            return self.winSave(outDir,iter,field_iter,coord,dpi=300)
+
+    def itgLi(self,fileList: list[str],outDir: str,name: str="efault_field_B_timelapt.gif",fps: int = 1) -> None:
+        ## Create a gif folder in the result directory
+        if not(os.path.exists(("./{}/gifs").format(outDir))):
+            os.mkdir("./{}/gifs".format(outDir))
+
+        
+        with imageio.get_writer(("./{}/gifs/{}").format(outDir,name),mode='I',fps=fps) as writer:
+            for nameOfFile in fileList:
+                image = imageio.imread(nameOfFile)
+                writer.append_data(image)
+
+    def itgWin(self,fileList: list[str],outDir: str,name: str="efault_field_B_timelapt.gif",fps: int = 1) -> None:
+        ## Creating a gif folder in the results directory
+        if not(os.path.exists(("{}\\{}\\gifs").format(self.cwd,outDir))):
+            os.mkdir(("{}\\{}\\gifs").format(self.cwd,outDir))
+        
+        with imageio.get_writer(("{}\\{}\\gifs\\{}").format(self.cwd,outDir,name),mode='I',fps=fps) as writer:
+            for nameOfFile in fileList:
+                image = imageio.imread(nameOfFile)
+                writer.append_data(image)
+
+    def liSave(self,outDir: str,iter: int,field_iter: str,coord: str,dpi: int=300) -> str:
+        ## Save figure in linux
+        path = ("./{}/iter:{}:{}{}.png").format(outDir,iter.item(),field_iter,coord)
+        plt.savefig(path, dpi=dpi)
+        plt.close()
+        return path
+    
+    def liSaveEnergy(self,outDir: str,iter: int, dpi: int=300) -> str:
+        ## Save figure in linux
+        path = ("./{}/iter:{}:Energy.png").format(outDir,iter.item())
+        plt.savefig(path, dpi=dpi)
+        plt.close()
+        return path
+
+    def winSave(self,outDir: str,iter:int ,field_iter: str,coord: str,dpi=300):
+        ## Save figure in windows
+        path = "{}\\{}\\iter-{}-{}{}.png".format(self.cwd,outDir,iter,field_iter,coord)
+        plt.savefig(path, dpi=dpi)
+        plt.close()
+        return path
+    
+    def winSaveEnergy(self,outDir: str,iter:int, dpi=300):
+        ## Save figure in windows
+        path = "{}\\{}\\iter-{}-Energy.png".format(self.cwd,outDir,iter)
+        plt.savefig(path, dpi=dpi)
+        plt.close()
+        return path
+
+series = fbpic()
+##series.electronEnergy(iteration=[100])
+##series.listFields()
+#outDir = str(input("Enter a output directory for this run  :"))
+outDir = "Test 2"
+fps = series.size/5
+print("Gif FPS is {}".format(fps))
+#series.saveFigures(outDir=outDir,coords=["x","y"],fps=fps)
+series.saveFigures(outDir=outDir,fields=["E"],coords=["x"],fps=fps)
+##series.electronEnergy(iteration=[950])
+
+
+""" for iter in it: 
+    rho, info_rho = ts.get_field( iteration=iter, field='rho',plot=True )
+    plt.show()
+    plt.close() """
