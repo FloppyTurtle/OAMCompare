@@ -41,27 +41,37 @@ class fbpic:
         self.ts.slider()
         plt.show()
 
-    def electronEnergy(self,iteration=[550]):
+    def electronEnergy(self,iteration:list[int], limits) -> None:
         plt.clf()
         plt.gcf()
         electronG = np.array(self.ts.get_particle(var_list = ["gamma"], iteration=iteration))
         electronW = np.array(self.ts.get_particle(var_list = ["w"], iteration=iteration))
         electronZ = np.array(self.ts.get_particle(var_list = ["z"], iteration=iteration))
 
-        ##print(electronG.shape)
-        ##print(electronW.shape)
-        ##print(electronZ.shape)
-
-        ##print(self.ts.avail_record_components)
-
         fig, ax = plt.subplots()
-        data_array, xedges, yedges, quadmesh,  = ax.hist2d(electronZ[0], electronG[0], weights = electronW[0], bins=(self.dims[1],self.dims[0]))
+        data_array, xedges, yedges, quadmesh  = ax.hist2d(electronZ[0], electronG[0], weights = electronW[0], bins=(self.dims[1],self.dims[0]))
         ax.ticklabel_format(axis = "x", style = "sci", scilimits = (-6,-6), useMathText = True)
         ax.set_xlabel("Z position (m)")
         ax.set_ylabel("Energy ($m_0c^2$)")
+        ax.set_ylim(bottom = limits[0], top = limits[1])
         time = self.time_it[np.where(self.it == iteration[0])[0][0]]
         plt.title("Gamma in the mode {} at {}{} (iteration {})".format("all",np.round(time*10**15,1),"$e^{-15}$",iteration[0]))
 
+    def gammaRange(self):
+        max = 0
+        for iter in self.it:
+            electronG = np.array(self.ts.get_particle(var_list = ["gamma"],iteration=iter))
+            try:
+                newMax = electronG[0].max()
+            except ValueError:
+                pass
+            else:
+                if newMax < max:
+                    pass
+                else:    
+                    max = newMax
+
+        return (1,max)
 
     def saveFigures(self, outDir: str="results",
                      iterations: list[int]= [],
@@ -99,25 +109,46 @@ class fbpic:
                 if field_iter == "rho" or field_iter == "J":
                     for coord in ["x"]:
                         print("coord :{}".format(coord))
+                        max=0
+                        min=0 
+                        for iter in iterations: 
+                            newMinMax = self.saveFig(iter, field_iter, coord, outDir,retMax=True)
+                            if newMinMax[1]>max:
+                                max = newMinMax[1]
+
+                            if newMinMax[0]<min:
+                                min = newMinMax[0]
+
+                        print(min,max)
                         fileList = []
                         for iter in iterations: 
-                            fileList.append(self.saveFig(iter, field_iter, coord, outDir)) 
-                        
+                            fileList.append(self.saveFig(iter, field_iter, coord, outDir, limits=(min,max))) 
                         self.itgLi(fileList,outDir,("{}_{}:gif.gif").format(field_iter,coord),fps) 
                 else:
                     for coord in coords:
                         print("coord :{}".format(coord))
+                        max=0
+                        min=0 
+                        for iter in iterations: 
+                            newMinMax = self.saveFig(iter, field_iter, coord, outDir,retMax=True)
+                            if newMinMax[1]>max:
+                                max = newMinMax[1]
+
+                            if newMinMax[0]<min:
+                                min = newMinMax[0]
+
                         fileList = []
                         for iter in iterations: 
-                            fileList.append(self.saveFig(iter, field_iter, coord, outDir)) 
-                        
+                            fileList.append(self.saveFig(iter, field_iter, coord, outDir, limits=(min,max))) 
+
                         self.itgLi(fileList,outDir,("{}_{}:gif.gif").format(field_iter,coord),fps) 
             
-            fileList = []
+            fileList=[]
+            limits = self.gammaRange()
             for iter in iterations:
-                self.electronEnergy(iteration=[iter])
-                self.liSaveEnergy(outDir, iter)
-            self.itgLi(fileList, outDir,("{}_energy:gif.gif").format(outDir))
+                self.electronEnergy([iter],limits)
+                fileList.append(self.liSaveEnergy(outDir, iter))
+            self.itgLi(fileList, outDir,("{}_energy_gif.gif").format(outDir))
 
         elif self.platform == "Windows" or self.platform == "windows":
             for field_iter in fields:
@@ -125,51 +156,69 @@ class fbpic:
                 if field_iter == "rho" or field_iter == "J":
                     for coord in ["x"]:
                         print("coord :{}".format(coord))
+                        max=0
+                        min=0 
+                        for iter in iterations: 
+                            newMinMax = self.saveFig(iter, field_iter, coord, outDir,retMax=True)
+                            if newMinMax[1]>max:
+                                max = newMinMax[1]
+
+                            if newMinMax[0]<min:
+                                min = newMinMax[0]
+
                         fileList = []
                         for iter in iterations: 
-                            fileList.append(self.saveFig(iter, field_iter, coord, outDir)) 
-                        
+                            fileList.append(self.saveFig(iter, field_iter, coord, outDir, limits=(min,max))) 
+
                         self.itgWin(fileList,outDir,("{}_{}-gif.gif").format(field_iter,coord),fps) 
                 else:
                     for coord in coords:
                         print("coord :{}".format(coord))
+                        max=0
+                        min=0 
+                        for iter in iterations: 
+                            newMinMax = self.saveFig(iter, field_iter, coord, outDir,retMax=True)
+                            if newMinMax[1]>max:
+                                max = newMinMax[1]
+
+                            if newMinMax[0]<min:
+                                min = newMinMax[0]
+
+                        print(min,max)
                         fileList = []
                         for iter in iterations: 
-                            fileList.append(self.saveFig(iter, field_iter, coord, outDir)) 
+                            fileList.append(self.saveFig(iter, field_iter, coord, outDir, limits=(min,max))) 
                         
                         self.itgWin(fileList,outDir,("{}_{}-gif.gif").format(field_iter,coord),fps) 
             
             fileList = []
+            limits = self.gammaRange()
             for iter in iterations:
-                self.electronEnergy(iteration=[iter])
+                self.electronEnergy([iter],limits)
                 fileList.append(self.winSaveEnergy(outDir, iter))
             self.itgWin(fileList, outDir,("{}_energy_gif.gif").format(outDir))
 
-
-    def saveFig(self,iter,field_iter,coord,outDir):
+    def saveFig(self,iter,field_iter,coord,outDir,retMax=False,limits = None):
         plt.clf()
-        plt.gcf()    
-        self.ts.get_field(iteration=iter, field = field_iter, coord = coord, plot=True)
-        """fig, ax = plt.subplots(1,1)
-        field = np.log(field+1.e16)
-        pcm = ax.pcolormesh(field, shading="auto")
-        print(field_info.axes)
-        ##ax.set_xlim(left = field_info.zmin, right = field_info.zmax)
-        ##ax.set_ylim(bottom = field_info.rmin, top = field_info.rmax)
+        plt.gcf()  
+        if not(retMax) :  
+            ## Requires no negative nums, since data cannot be changed, cannot modify to fix
+            ##self.ts.get_field(iteration=iter, field = field_iter, coord = coord, plot=True, norm = colors.LogNorm(vmin=1, vmax = limits[1]))
 
-        ax.set_xticklabels(np.round(np.linspace(field_info.zmin, field_info.zmax,num=10),6))
-        fig.colorbar(pcm, ax=ax, extend="max")  """
-        if self.platform == "Linux" or self.platform == "linux":
-            return self.liSave(outDir,iter,field_iter,coord,dpi=300)
+            self.ts.get_field(iteration=iter, field = field_iter, coord = coord, plot=True, norm = colors.SymLogNorm(linthresh=1,linscale=1,vmin=1, vmax = limits[1]))
+            if self.platform == "Linux" or self.platform == "linux":
+                return self.liSave(outDir,iter,field_iter,coord,dpi=300)
+            else:
+                return self.winSave(outDir,iter,field_iter,coord,dpi=300)
         else:
-            return self.winSave(outDir,iter,field_iter,coord,dpi=300)
-
+            data, data_info = self.ts.get_field(iteration=iter, field = field_iter, coord = coord, plot=False)
+            return (data.min(),data.max())
+            
     def itgLi(self,fileList: list[str],outDir: str,name: str="efault_field_B_timelapt.gif",fps: int = 1) -> None:
         ## Create a gif folder in the result directory
         if not(os.path.exists(("./{}/gifs").format(outDir))):
             os.mkdir("./{}/gifs".format(outDir))
 
-        
         with imageio.get_writer(("./{}/gifs/{}").format(outDir,name),mode='I',fps=fps) as writer:
             for nameOfFile in fileList:
                 image = imageio.imread(nameOfFile)
@@ -214,18 +263,12 @@ class fbpic:
         return path
 
 series = fbpic()
-##series.electronEnergy(iteration=[100])
-##series.listFields()
-#outDir = str(input("Enter a output directory for this run  :"))
-outDir = "Test 2"
+series.listFields()
+outDir = str(input("Enter a output directory for this run  :"))
+##outDir = "Test 2"
 fps = series.size/5
 print("Gif FPS is {}".format(fps))
-#series.saveFigures(outDir=outDir,coords=["x","y"],fps=fps)
-series.saveFigures(outDir=outDir,fields=["E"],coords=["x"],fps=fps)
+series.saveFigures(outDir=outDir,coords=["x","y"],fps=fps)
+##series.saveFigures(outDir=outDir,fields=["E"],coords=["x"],fps=fps)
 ##series.electronEnergy(iteration=[950])
 
-
-""" for iter in it: 
-    rho, info_rho = ts.get_field( iteration=iter, field='rho',plot=True )
-    plt.show()
-    plt.close() """

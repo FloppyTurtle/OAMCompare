@@ -47,10 +47,10 @@ use_cuda = False
 n_order = -1
 
 # The simulation box
-Nz = 200     # Number of gridpoints along z
+Nz = 200       # Number of gridpoints along z
 zmax = 30.e-6    # Right end of the simulation box (meters)
 zmin = -30.e-6   # Left end of the simulation box (meters)
-Nr = 100         # Number of gridpoints along r
+Nr = 50          # Number of gridpoints along r
 rmax = 20.e-6    # Length of the box along r (meters)
 Nm = 2           # Number of modes used
 
@@ -58,13 +58,13 @@ Nm = 2           # Number of modes used
 dt = (zmax-zmin)/Nz/c   # Timestep (seconds)
 
 # The particles
-p_zmin = 30.e-6  # Position of the beginning of the plasma (meters)
-p_zmax = 500.e-6 # Position of the end of the plasma (meters)
-p_rmax = 18.e-6  # Maximal radial position of the plasma (meters)
-n_e = 143.e17*1.e6 # Density (electrons.meters^-3)
-p_nz = 2         # Number of particles per cell along z
-p_nr = 2         # Number of particles per cell along r
-p_nt = 4         # Number of particles per cell along theta
+p_zmin = 30.e-6     # Position of the beginning of the plasma (meters)
+p_zmax = 500.e-6    # Position of the end of the plasma (meters)
+p_rmax = 18.e-6     # Maximal radial position of the plasma (meters)
+n_e = 143.e17*1.e6  # Density (electrons.meters^-3)
+p_nz = 2            # Number of particles per cell along z
+p_nr = 2            # Number of particles per cell along r
+p_nt = 4            # Number of particles per cell along theta
 
 # The moving window
 v_window = c       # Speed of the window
@@ -132,7 +132,7 @@ if __name__ == '__main__':
     # The laser
     a0 = 4.          # Laser amplitude
     w0 = 5.e-6       # Laser waist
-    tau = 16.e-15     # Laser duration
+    tau = 45.e-15     # Laser duration
     z0 = 15.e-6      # Laser centroid
     laser_profile = GaussianLaser(a0, w0, tau, z0)
     add_laser_pulse( sim,laser_profile)
@@ -164,7 +164,7 @@ if __name__ == '__main__':
     # Add diagnostics
     sim.diags = [ FieldDiagnostic( diag_period, sim.fld, comm=sim.comm ),
                   ParticleDiagnostic( diag_period, {"electrons" : elec},
-                    select={"uz" : [1., None ]}, comm=sim.comm, particle_data=["gamma"] ) ]
+                    select={"ux" : [-10., 10 ],"uy" : [-10., -10.]}, comm=sim.comm, particle_data=["gamma","position","weighting"] ) ]
 
     # Add checkpoints
     if save_checkpoints:
