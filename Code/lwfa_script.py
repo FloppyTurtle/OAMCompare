@@ -31,7 +31,7 @@ from fbpic.openpmd_diag import FieldDiagnostic, ParticleDiagnostic, \
 # ----------
 
 # Whether to use the GPU
-use_cuda = True
+use_cuda = False
 
 # Order of the stencil for z derivatives in the Maxwell solver.
 # Use -1 for infinite order, i.e. for exact dispersion relation in
@@ -64,21 +64,17 @@ p_nz = 2         # Number of particles per cell along z
 p_nr = 2         # Number of particles per cell along r
 p_nt = 4         # Number of particles per cell along theta
 
-# The laser
-a0 = 4.          # Laser amplitude
-w0 = 5.e-6       # Laser waist
-tau = 16.e-15     # Laser duration
-z0 = 15.e-6      # Laser centroid
+
 
 # The moving window
 v_window = c       # Speed of the window
 
 # The diagnostics and the checkpoints/restarts
-diag_period = 50         # Period of the diagnostics in number of timesteps
+diag_period = 25        # Period of the diagnostics in number of timesteps
 save_checkpoints = False # Whether to write checkpoint files
 checkpoint_period = 100  # Period for writing the checkpoints
 use_restart = False      # Whether to restart from a previous checkpoint
-track_electrons = False  # Whether to track and write particle ids
+track_electrons = True # Whether to track and write particle ids
 
 # The density profile
 ramp_start = 30.e-6
@@ -121,6 +117,11 @@ if __name__ == '__main__':
 
     # Load initial fields
     # Create a Gaussian laser profile
+    # The laser
+    a0 = 4.          # Laser amplitude
+    w0 = 5.e-6       # Laser waist
+    tau = 16.e-15     # Laser duration
+    z0 = 15.e-6      # Laser centroid
     laser_profile = GaussianLaser(a0, w0, tau, z0)
     # Add the laser to the fields of the simulation
     add_laser_pulse( sim, laser_profile)
@@ -139,8 +140,7 @@ if __name__ == '__main__':
     # Add diagnostics
     sim.diags = [ FieldDiagnostic( diag_period, sim.fld, comm=sim.comm ),
                   ParticleDiagnostic( diag_period, {"electrons" : elec},
-                    select={"uz" : [1., None ]}, comm=sim.comm ) ]
-
+                    select={"x" : [-10., 10. ],"y" : [-10., -10.]}, comm=sim.comm, particle_data=["gamma","position","weighting"] ) ]
     # Add checkpoints
     if save_checkpoints:
         set_periodic_checkpoint( sim, checkpoint_period )

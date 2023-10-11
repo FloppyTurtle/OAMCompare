@@ -164,7 +164,7 @@ if __name__ == '__main__':
     # Add diagnostics
     sim.diags = [ FieldDiagnostic( diag_period, sim.fld, comm=sim.comm ),
                   ParticleDiagnostic( diag_period, {"electrons" : elec},
-                    select={"x" : [-10., 10. ],"y" : [-10., -10.]}, comm=sim.comm, particle_data=["gamma","position","weighting"] ) ]
+                    select={"uz": [1.0, None]}, comm=sim.comm, particle_data=["gamma","position","weighting"] ) ]
 
     # Add checkpoints
     if save_checkpoints:

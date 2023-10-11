@@ -48,26 +48,29 @@ class fbpic:
         electronG = np.array(self.ts.get_particle(var_list = ["gamma"], iteration=iteration))
         electronW = np.array(self.ts.get_particle(var_list = ["w"], iteration=iteration))
         electronZ = np.array(self.ts.get_particle(var_list = ["z"], iteration=iteration))
+
         try:
             minz = electronZ[0].min()
             maxz = electronZ[0].max()
-            maxG = electronG[0].max()
+            
         except ValueError:
             minz = -30.e-6
             maxz = 30.e-6
+            maxG = 1
         else:
             minz = electronZ[0].min()
             maxz = electronZ[0].max()
-            maxG = 1
+            maxG = electronG[0].max()
 
+        ymax = np.ceil(limits[1])+1
         fig, ax = plt.subplots()
         data_array, xedges, yedges, quadmesh  = ax.hist2d(electronZ[0], electronG[0], weights = electronW[0],
-                                                           bins=(self.dims[1],self.dims[0]), range = [[minz,maxz],[1,limits[1]]] )
+                                                           bins=(self.dims[1],self.dims[0]), range = [[minz,maxz],[1,ymax]] )
         #print("Edges are {} and {}".format(xedges,yedges))
         ax.ticklabel_format(axis = "x", style = "sci", scilimits = (-6,-6), useMathText = True)
         ax.set_xlabel("Z position (m)")
         ax.set_ylabel("Energy ($m_0c^2$)")
-        ax.set_ylim(bottom = limits[0], top = limits[1])
+        ax.set_ylim(bottom = limits[0], top = ymax)
         ax.set_facecolor((46/255,0,22/255))
         plt.axhline(y=maxG,color="r",linestyle="-")
         time = self.time_it[np.where(self.it == iteration[0])[0][0]]
@@ -75,19 +78,44 @@ class fbpic:
 
     def gammaRange(self):
         max = 1
+        min = np.inf
         for iter in self.it:
             electronG = np.array(self.ts.get_particle(var_list = ["gamma"],iteration=iter))
             try:
                 newMax = electronG[0].max()
+                newMin = electronG[0].min()
             except ValueError:
                 pass
             else:
-                if newMax < max:
+                if newMax <= max:
                     pass
                 else:    
                     max = newMax
 
-        return (1,max)
+                if newMin >= min:
+                    pass
+                else:
+                    min = newMin
+
+        if abs(newMin)< 1:
+            y_error = abs(newMin)
+            print(y_error)
+            order = np.log10(y_error)
+            print(order)
+            order = np.floor(float(order))
+            print(order)
+            error = np.round(y_error*0.511,-int(order-1))
+            bMax = np.round(max*0.511,-int(order-1))
+        else:
+            y_error = 0.01*max
+            order = np.log10(y_error)
+            print(order)
+            order = np.floor(float(order))
+            print(order)
+            error = np.round(y_error*0.511,-int(order-1))
+            bMax = np.round(max*0.511,-int(order-1))
+        print(("Max Gamma is {} with a total energy of {}±{} GeV").format(max,bMax,error))
+        return (newMin,max)
 
     def saveFigures(self, outDir: str="results",
                      iterations: list[int]= [],
@@ -95,6 +123,7 @@ class fbpic:
                      particles:list[str]=[],
                      coords: list[str] = ["x"],
                      energy: bool = False, 
+                     skip_energy: bool = False,
                      fps:int = 2) -> None:
         
         ## Create the result directory
@@ -157,13 +186,13 @@ class fbpic:
                             fileList.append(self.saveFig(iter, field_iter, coord, outDir, norm=self.norm, limits=(min,max))) 
 
                         self.itgLi(fileList,outDir,("{}_{}:gif.gif").format(field_iter,coord),fps) 
-            
-            fileList=[]
-            limits = self.gammaRange()
-            for iter in iterations:
-                self.electronEnergy([iter],limits)
-                fileList.append(self.liSaveEnergy(outDir, iter))
-            self.itgLi(fileList, outDir,("{}_energy_gif.gif").format(outDir),fps)
+            if not(skip_energy):
+                fileList=[]
+                limits = self.gammaRange()
+                for iter in iterations:
+                    self.electronEnergy([iter],limits)
+                    fileList.append(self.liSaveEnergy(outDir, iter))
+                self.itgLi(fileList, outDir,("{}_energy_gif.gif").format(outDir),fps)
 
         elif self.platform == "Windows" or self.platform == "windows":
             for field_iter in fields:
@@ -206,12 +235,14 @@ class fbpic:
                         
                         self.itgWin(fileList,outDir,("{}_{}-gif.gif").format(field_iter,coord),fps) 
             
-            fileList = []
-            limits = self.gammaRange()
-            for iter in iterations:
-                self.electronEnergy([iter],limits)
-                fileList.append(self.winSaveEnergy(outDir, iter))
-            self.itgWin(fileList, outDir,("{}_energy_gif.gif").format(outDir),fps)
+            
+            if not(skip_energy):
+                fileList = []
+                limits = self.gammaRange()
+                for iter in iterations:
+                    self.electronEnergy([iter],limits)
+                    fileList.append(self.winSaveEnergy(outDir, iter))
+                self.itgWin(fileList, outDir,("{}_energy_gif.gif").format(outDir),fps)
 
     def saveFig(self,iter,field_iter,coord,outDir,retMax=False,limits = None, norm=None):
         plt.clf()
@@ -223,7 +254,7 @@ class fbpic:
             elif norm == "symLog":
                 self.ts.get_field(iteration=iter, field = field_iter, coord = coord, plot=True, norm = colors.SymLogNorm(linthresh=1,linscale=1,vmin=1, vmax = limits[1]))
             else:
-                self.ts.get_field(iteration=iter, field = field_iter, coord = coord, plot=True)
+                self.ts.get_field(iteration=iter, field = field_iter, coord = coord, plot=True, vmin = limits[0], vmax= limits[1] )
             
             if self.platform == "Linux" or self.platform == "linux":
                 return self.liSave(outDir,iter,field_iter,coord,dpi=300)
@@ -287,7 +318,7 @@ outDir = str(input("Enter a output directory for this run  :"))
 ##outDir = "Test 2"
 fps = series.size/5
 print("Gif FPS is {}".format(fps))
-##series.saveFigures(outDir=outDir,coords=["x","y"],fps=fps)
-series.saveFigures(outDir=outDir,fields=[],coords=["x"],fps=fps,energy=True)
+series.saveFigures(outDir=outDir,coords=["x","y"],fps=fps,energy=True)
+#series.saveFigures(outDir=outDir,fields=[],coords=["x"],fps=fps,skip_energy=True)
 ##series.electronEnergy(iteration=[950])
 
