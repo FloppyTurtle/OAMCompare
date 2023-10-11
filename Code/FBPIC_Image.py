@@ -10,7 +10,7 @@ import matplotlib.colors as colors
 import numpy as np
 
 class fbpic:
-    def __init__(self, relativeInputPath = "/diags/hdf5") -> None:
+    def __init__(self, relativeInputPath = "/diags/hdf5",norm = None) -> None:
         ## Find what platform we are on necessary for saving files
         self.platform = platform.system()
         if not relativeInputPath:
@@ -23,6 +23,7 @@ class fbpic:
         self.cwd = os.getcwd()
         self.inputDataPath =  self.cwd + relativeInputPath
         self.relativeInputPath = relativeInputPath
+        self.norm = norm
 
         self.ts = OpenPMDTimeSeries(self.inputDataPath)
         self.it = self.ts.iterations
@@ -47,18 +48,33 @@ class fbpic:
         electronG = np.array(self.ts.get_particle(var_list = ["gamma"], iteration=iteration))
         electronW = np.array(self.ts.get_particle(var_list = ["w"], iteration=iteration))
         electronZ = np.array(self.ts.get_particle(var_list = ["z"], iteration=iteration))
+        try:
+            minz = electronZ[0].min()
+            maxz = electronZ[0].max()
+            maxG = electronG[0].max()
+        except ValueError:
+            minz = -30.e-6
+            maxz = 30.e-6
+        else:
+            minz = electronZ[0].min()
+            maxz = electronZ[0].max()
+            maxG = 1
 
         fig, ax = plt.subplots()
-        data_array, xedges, yedges, quadmesh  = ax.hist2d(electronZ[0], electronG[0], weights = electronW[0], bins=(self.dims[1],self.dims[0]))
+        data_array, xedges, yedges, quadmesh  = ax.hist2d(electronZ[0], electronG[0], weights = electronW[0],
+                                                           bins=(self.dims[1],self.dims[0]), range = [[minz,maxz],[1,limits[1]]] )
+        #print("Edges are {} and {}".format(xedges,yedges))
         ax.ticklabel_format(axis = "x", style = "sci", scilimits = (-6,-6), useMathText = True)
         ax.set_xlabel("Z position (m)")
         ax.set_ylabel("Energy ($m_0c^2$)")
         ax.set_ylim(bottom = limits[0], top = limits[1])
+        ax.set_facecolor((46/255,0,22/255))
+        plt.axhline(y=maxG,color="r",linestyle="-")
         time = self.time_it[np.where(self.it == iteration[0])[0][0]]
         plt.title("Gamma in the mode {} at {}{} (iteration {})".format("all",np.round(time*10**15,1),"$e^{-15}$",iteration[0]))
 
     def gammaRange(self):
-        max = 0
+        max = 1
         for iter in self.it:
             electronG = np.array(self.ts.get_particle(var_list = ["gamma"],iteration=iter))
             try:
@@ -77,7 +93,8 @@ class fbpic:
                      iterations: list[int]= [],
                      fields: list[str]=[],
                      particles:list[str]=[],
-                     coords: list[str] = ["x"], 
+                     coords: list[str] = ["x"],
+                     energy: bool = False, 
                      fps:int = 2) -> None:
         
         ## Create the result directory
@@ -93,11 +110,9 @@ class fbpic:
         if not iterations:
             iterations = self.it
 
-        if not fields:
-            fields = self.ts.avail_fields
-
-        if not particles:
-            particles = self.ts.avail_species
+        if not energy:
+            if not fields:
+                fields = self.ts.avail_fields
 
 
         ## Same function but one for linux and one for windows since the address
@@ -122,7 +137,7 @@ class fbpic:
                         print(min,max)
                         fileList = []
                         for iter in iterations: 
-                            fileList.append(self.saveFig(iter, field_iter, coord, outDir, limits=(min,max))) 
+                            fileList.append(self.saveFig(iter, field_iter, coord, outDir,norm=self.norm, limits=(min,max))) 
                         self.itgLi(fileList,outDir,("{}_{}:gif.gif").format(field_iter,coord),fps) 
                 else:
                     for coord in coords:
@@ -139,7 +154,7 @@ class fbpic:
 
                         fileList = []
                         for iter in iterations: 
-                            fileList.append(self.saveFig(iter, field_iter, coord, outDir, limits=(min,max))) 
+                            fileList.append(self.saveFig(iter, field_iter, coord, outDir, norm=self.norm, limits=(min,max))) 
 
                         self.itgLi(fileList,outDir,("{}_{}:gif.gif").format(field_iter,coord),fps) 
             
@@ -148,7 +163,7 @@ class fbpic:
             for iter in iterations:
                 self.electronEnergy([iter],limits)
                 fileList.append(self.liSaveEnergy(outDir, iter))
-            self.itgLi(fileList, outDir,("{}_energy_gif.gif").format(outDir))
+            self.itgLi(fileList, outDir,("{}_energy_gif.gif").format(outDir),fps)
 
         elif self.platform == "Windows" or self.platform == "windows":
             for field_iter in fields:
@@ -168,7 +183,7 @@ class fbpic:
 
                         fileList = []
                         for iter in iterations: 
-                            fileList.append(self.saveFig(iter, field_iter, coord, outDir, limits=(min,max))) 
+                            fileList.append(self.saveFig(iter, field_iter, coord, outDir,norm=self.norm, limits=(min,max))) 
 
                         self.itgWin(fileList,outDir,("{}_{}-gif.gif").format(field_iter,coord),fps) 
                 else:
@@ -187,7 +202,7 @@ class fbpic:
                         print(min,max)
                         fileList = []
                         for iter in iterations: 
-                            fileList.append(self.saveFig(iter, field_iter, coord, outDir, limits=(min,max))) 
+                            fileList.append(self.saveFig(iter, field_iter, coord, outDir, norm=self.norm, limits=(min,max))) 
                         
                         self.itgWin(fileList,outDir,("{}_{}-gif.gif").format(field_iter,coord),fps) 
             
@@ -196,16 +211,20 @@ class fbpic:
             for iter in iterations:
                 self.electronEnergy([iter],limits)
                 fileList.append(self.winSaveEnergy(outDir, iter))
-            self.itgWin(fileList, outDir,("{}_energy_gif.gif").format(outDir))
+            self.itgWin(fileList, outDir,("{}_energy_gif.gif").format(outDir),fps)
 
-    def saveFig(self,iter,field_iter,coord,outDir,retMax=False,limits = None):
+    def saveFig(self,iter,field_iter,coord,outDir,retMax=False,limits = None, norm=None):
         plt.clf()
         plt.gcf()  
         if not(retMax) :  
-            ## Requires no negative nums, since data cannot be changed, cannot modify to fix
-            ##self.ts.get_field(iteration=iter, field = field_iter, coord = coord, plot=True, norm = colors.LogNorm(vmin=1, vmax = limits[1]))
-
-            self.ts.get_field(iteration=iter, field = field_iter, coord = coord, plot=True, norm = colors.SymLogNorm(linthresh=1,linscale=1,vmin=1, vmax = limits[1]))
+            if norm == "log":
+                ## Requires no negative nums, since data cannot be changed, cannot modify to fix
+                self.ts.get_field(iteration=iter, field = field_iter, coord = coord, plot=True, norm = colors.LogNorm(vmin=1, vmax = limits[1]))
+            elif norm == "symLog":
+                self.ts.get_field(iteration=iter, field = field_iter, coord = coord, plot=True, norm = colors.SymLogNorm(linthresh=1,linscale=1,vmin=1, vmax = limits[1]))
+            else:
+                self.ts.get_field(iteration=iter, field = field_iter, coord = coord, plot=True)
+            
             if self.platform == "Linux" or self.platform == "linux":
                 return self.liSave(outDir,iter,field_iter,coord,dpi=300)
             else:
@@ -262,13 +281,13 @@ class fbpic:
         plt.close()
         return path
 
-series = fbpic()
+series = fbpic(norm = None)
 series.listFields()
 outDir = str(input("Enter a output directory for this run  :"))
 ##outDir = "Test 2"
 fps = series.size/5
 print("Gif FPS is {}".format(fps))
-series.saveFigures(outDir=outDir,coords=["x","y"],fps=fps)
-##series.saveFigures(outDir=outDir,fields=["E"],coords=["x"],fps=fps)
+##series.saveFigures(outDir=outDir,coords=["x","y"],fps=fps)
+series.saveFigures(outDir=outDir,fields=[],coords=["x"],fps=fps,energy=True)
 ##series.electronEnergy(iteration=[950])
 

@@ -91,7 +91,7 @@ def dens_func( z, r ) :
     return(n)
 
 # The interaction length of the simulation (meters)
-L_interact = 50.e-6 # increase to simulate longer distance!  ##Default is 50
+L_interact = 100.e-6 # increase to simulate longer distance!  ##Default is 50
 # Interaction time (seconds) (to calculate number of PIC iterations)
 T_interact = ( L_interact + (zmax-zmin) ) / v_window
 # (i.e. the time it takes for the moving window to slide across the plasma) 
@@ -130,11 +130,11 @@ if __name__ == '__main__':
     #z0 = 15.e-6      # Laser centroid
 
     # The laser
-    a0 = 4.          # Laser amplitude
-    w0 = 5.e-6       # Laser waist
+    a0 = 203.e-2          # Laser amplitude
+    w0 = 67.e-7       # Laser waist
     tau = 45.e-15     # Laser duration
     z0 = 15.e-6      # Laser centroid
-    laser_profile = GaussianLaser(a0, w0, tau, z0)
+    laser_profile = GaussianLaser(a0, w0, tau, z0, zf=ramp_start, lambda0 = 815.e-9)
     add_laser_pulse( sim,laser_profile)
 
     """ donut_laser_profile = DonutLikeLaguerreGaussLaser(0, 0, a0, w0, tau, 0, zf=ramp_start)
@@ -164,7 +164,7 @@ if __name__ == '__main__':
     # Add diagnostics
     sim.diags = [ FieldDiagnostic( diag_period, sim.fld, comm=sim.comm ),
                   ParticleDiagnostic( diag_period, {"electrons" : elec},
-                    select={"ux" : [-10., 10 ],"uy" : [-10., -10.]}, comm=sim.comm, particle_data=["gamma","position","weighting"] ) ]
+                    select={"x" : [-10., 10. ],"y" : [-10., -10.]}, comm=sim.comm, particle_data=["gamma","position","weighting"] ) ]
 
     # Add checkpoints
     if save_checkpoints:
