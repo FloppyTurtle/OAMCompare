@@ -8,6 +8,7 @@ from matplotlib import cm
 import matplotlib.cbook as cbook
 import matplotlib.colors as colors
 import numpy as np
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 class fbpic:
     def __init__(self, relativeInputPath = "/diags/hdf5",norm = None) -> None:
@@ -57,21 +58,27 @@ class fbpic:
             minz = -30.e-6
             maxz = 30.e-6
             maxG = 1
+            maxW = 1
         else:
             minz = electronZ[0].min()
             maxz = electronZ[0].max()
             maxG = electronG[0].max()
+            maxW = electronW[0].max()
 
         ymax = np.ceil(limits[1])+1
         fig, ax = plt.subplots()
         data_array, xedges, yedges, quadmesh  = ax.hist2d(electronZ[0], electronG[0], weights = electronW[0],
-                                                           bins=(self.dims[1],self.dims[0]), range = [[minz,maxz],[1,ymax]] )
+                                                           bins=(self.dims[1],self.dims[0]), range = [[minz,maxz],[1,ymax]], norm = colors.LogNorm(vmin = 0.0001, vmax = maxW),
+                                                           cmap="plasma" )
         #print("Edges are {} and {}".format(xedges,yedges))
         ax.ticklabel_format(axis = "x", style = "sci", scilimits = (-6,-6), useMathText = True)
         ax.set_xlabel("Z position (m)")
         ax.set_ylabel("Energy ($m_0c^2$)")
         ax.set_ylim(bottom = limits[0], top = ymax)
         ax.set_facecolor((46/255,0,22/255))
+        
+        fig.colorbar(quadmesh, ax=ax)
+        
         plt.axhline(y=maxG,color="r",linestyle="-")
         time = self.time_it[np.where(self.it == iteration[0])[0][0]]
         plt.title("Gamma in the mode {} at {}{} (iteration {})".format("all",np.round(time*10**15,1),"$e^{-15}$",iteration[0]))
@@ -99,19 +106,14 @@ class fbpic:
 
         if abs(newMin)< 1:
             y_error = abs(newMin)
-            print(y_error)
             order = np.log10(y_error)
-            print(order)
             order = np.floor(float(order))
-            print(order)
             error = np.round(y_error*0.511,-int(order-1))
             bMax = np.round(max*0.511,-int(order-1))
         else:
             y_error = 0.01*max
             order = np.log10(y_error)
-            print(order)
             order = np.floor(float(order))
-            print(order)
             error = np.round(y_error*0.511,-int(order-1))
             bMax = np.round(max*0.511,-int(order-1))
         print(("Max Gamma is {} with a total energy of {}±{} GeV").format(max,bMax,error))
@@ -315,10 +317,10 @@ class fbpic:
 series = fbpic(norm = None)
 series.listFields()
 outDir = str(input("Enter a output directory for this run  :"))
-##outDir = "Test 2"
+#outDir = "Pulse Length"
 fps = series.size/5
 print("Gif FPS is {}".format(fps))
-series.saveFigures(outDir=outDir,coords=["x","y"],fps=fps,energy=True)
+series.saveFigures(outDir=outDir,coords=["x","y"],fps=fps)
 #series.saveFigures(outDir=outDir,fields=[],coords=["x"],fps=fps,skip_energy=True)
 ##series.electronEnergy(iteration=[950])
 

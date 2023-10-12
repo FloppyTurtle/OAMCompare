@@ -45,10 +45,10 @@ use_cuda = False
 n_order = -1
 
 # The simulation box
-Nz = 1000         # Number of gridpoints along z
+Nz = 2000         # Number of gridpoints along z
 zmax = 30.e-6    # Right end of the simulation box (meters)
 zmin = -30.e-6   # Left end of the simulation box (meters)
-Nr = 50          # Number of gridpoints along r
+Nr = 200         # Number of gridpoints along r
 rmax = 20.e-6    # Length of the box along r (meters)
 Nm = 2           # Number of modes used
 
@@ -118,8 +118,8 @@ if __name__ == '__main__':
     # Load initial fields
     # Create a Gaussian laser profile
     # The laser
-    a0 = 4.          # Laser amplitude
-    w0 = 5.e-6       # Laser waist
+    a0 = 203.e-2          # Laser amplitude
+    w0 = 67.e-7       # Laser waist
     tau = 45.e-15     # Laser duration
     z0 = 15.e-6      # Laser centroid
     laser_profile = GaussianLaser(a0, w0, tau, z0, zf=ramp_start, )
