@@ -1,14 +1,11 @@
-import h5py, os, platform, subprocess
+import os, platform, subprocess
 import imageio.v2 as imageio
 from openpmd_viewer import OpenPMDTimeSeries
 import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
-from matplotlib import cm
-import matplotlib.cbook as cbook
 import matplotlib.colors as colors
 import numpy as np
-from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 class fbpic:
     def __init__(self, relativeInputPath = "/diags/hdf5",norm = None) -> None:
@@ -104,7 +101,7 @@ class fbpic:
                 else:
                     min = newMin
 
-        if abs(newMin)< 1:
+        if abs(min)< 1:
             y_error = abs(newMin)
             order = np.log10(y_error)
             order = np.floor(float(order))
@@ -117,7 +114,9 @@ class fbpic:
             error = np.round(y_error*0.511,-int(order-1))
             bMax = np.round(max*0.511,-int(order-1))
         print(("Max Gamma is {} with a total energy of {}±{} GeV").format(max,bMax,error))
-        return (newMin,max)
+        if min == np.inf:
+            min = 0
+        return (min,max)
 
     def saveFigures(self, outDir: str="results",
                      iterations: list[int]= [],
@@ -245,6 +244,8 @@ class fbpic:
                     self.electronEnergy([iter],limits)
                     fileList.append(self.winSaveEnergy(outDir, iter))
                 self.itgWin(fileList, outDir,("{}_energy_gif.gif").format(outDir),fps)
+                
+        plt.close()
 
     def saveFig(self,iter,field_iter,coord,outDir,retMax=False,limits = None, norm=None):
         plt.clf()
@@ -320,7 +321,7 @@ outDir = str(input("Enter a output directory for this run  :"))
 #outDir = "Pulse Length"
 fps = series.size/5
 print("Gif FPS is {}".format(fps))
-series.saveFigures(outDir=outDir,coords=["x","y"],fps=fps)
-#series.saveFigures(outDir=outDir,fields=[],coords=["x"],fps=fps,skip_energy=True)
+#series.saveFigures(outDir=outDir,coords=["x","y"],fps=fps)
+series.saveFigures(outDir=outDir,fields=[],coords=["x"],fps=fps)
 ##series.electronEnergy(iteration=[950])
 

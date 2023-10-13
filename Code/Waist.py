@@ -29,9 +29,8 @@ from fbpic.openpmd_diag import FieldDiagnostic, ParticleDiagnostic, \
 # ----------
 # Parameters
 # ----------
-
 # Whether to use the GPU
-use_cuda = False
+use_cuda = True
 
 # Order of the stencil for z derivatives in the Maxwell solver.
 # Use -1 for infinite order, i.e. for exact dispersion relation in
@@ -45,10 +44,10 @@ use_cuda = False
 n_order = -1
 
 # The simulation box
-Nz = 2000         # Number of gridpoints along z
+Nz = 800         # Number of gridpoints along z
 zmax = 30.e-6    # Right end of the simulation box (meters)
 zmin = -30.e-6   # Left end of the simulation box (meters)
-Nr = 200         # Number of gridpoints along r
+Nr = 50         # Number of gridpoints along r
 rmax = 20.e-6    # Length of the box along r (meters)
 Nm = 2           # Number of modes used
 
