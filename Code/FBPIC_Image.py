@@ -1,4 +1,4 @@
-import os, platform, subprocess
+import os, platform, subprocess, sys
 import imageio.v2 as imageio
 from openpmd_viewer import OpenPMDTimeSeries
 import matplotlib
@@ -6,6 +6,7 @@ matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 import numpy as np
+import pyvista
 
 class fbpic:
     def __init__(self, relativeInputPath = "/diags/hdf5",norm = None) -> None:
@@ -34,11 +35,6 @@ class fbpic:
     ## List all avaliable fields
     def listFields(self):
         print(self.ts.avail_fields)
-
-    ## This only seems to work in Juypter and not on my linux setup
-    def slider(self):
-        self.ts.slider()
-        plt.show()
 
     def electronEnergy(self,iteration:list[int], limits) -> None:
         plt.clf()
@@ -70,9 +66,9 @@ class fbpic:
         #print("Edges are {} and {}".format(xedges,yedges))
         ax.ticklabel_format(axis = "x", style = "sci", scilimits = (-6,-6), useMathText = True)
         ax.set_xlabel("Z position (m)")
-        ax.set_ylabel("Energy ($m_0c^2$)")
+        ax.set_ylabel("Gamma ($\gamma$)")
         ax.set_ylim(bottom = limits[0], top = ymax)
-        ax.set_facecolor((46/255,0,22/255))
+        ax.set_facecolor((22/255, 6/255, 138/255))
         
         fig.colorbar(quadmesh, ax=ax)
         
@@ -123,8 +119,10 @@ class fbpic:
                      fields: list[str]=[],
                      particles:list[str]=[],
                      coords: list[str] = ["x"],
-                     energy: bool = False, 
+                     just_energy: bool = False, 
                      skip_energy: bool = False,
+                     just_3d: bool = False, 
+                     skip_3d: bool = False,
                      fps:int = 2) -> None:
         
         ## Create the result directory
@@ -140,7 +138,7 @@ class fbpic:
         if not iterations:
             iterations = self.it
 
-        if not energy:
+        if not (just_energy or just_3d):
             if not fields:
                 fields = self.ts.avail_fields
 
@@ -151,42 +149,30 @@ class fbpic:
         if self.platform == "Linux" or self.platform == "linux":
             for field_iter in fields:
                 print("field  :{}".format(field_iter))
-                if field_iter == "rho" or field_iter == "J":
-                    for coord in ["x"]:
-                        print("coord :{}".format(coord))
-                        max=0
-                        min=0 
-                        for iter in iterations: 
-                            newMinMax = self.saveFig(iter, field_iter, coord, outDir,retMax=True)
-                            if newMinMax[1]>max:
-                                max = newMinMax[1]
-
-                            if newMinMax[0]<min:
-                                min = newMinMax[0]
-
-                        print(min,max)
-                        fileList = []
-                        for iter in iterations: 
-                            fileList.append(self.saveFig(iter, field_iter, coord, outDir,norm=self.norm, limits=(min,max))) 
-                        self.itgLi(fileList,outDir,("{}_{}:gif.gif").format(field_iter,coord),fps) 
+                if not(field_iter == "rho" or field_iter == "J"):
+                    pass
                 else:
-                    for coord in coords:
-                        print("coord :{}".format(coord))
-                        max=0
-                        min=0 
-                        for iter in iterations: 
-                            newMinMax = self.saveFig(iter, field_iter, coord, outDir,retMax=True)
-                            if newMinMax[1]>max:
-                                max = newMinMax[1]
+                    coords = ["x"]
+            
+                for coord in coords:
+                    print("coord :{}".format(coord))
+                    max=0
+                    min=0 
+                    for iter in iterations: 
+                        newMinMax = self.saveFig(iter, field_iter, coord, outDir,retMax=True)
+                        if newMinMax[1]>max:
+                            max = newMinMax[1]
 
-                            if newMinMax[0]<min:
-                                min = newMinMax[0]
+                        if newMinMax[0]<min:
+                            min = newMinMax[0]
 
-                        fileList = []
-                        for iter in iterations: 
-                            fileList.append(self.saveFig(iter, field_iter, coord, outDir, norm=self.norm, limits=(min,max))) 
+                    fileList = [] 
+                    for iter in iterations: 
+                        fileList.append(self.saveFig(iter, field_iter, coord, outDir, norm=self.norm, limits=(min,max))) 
 
-                        self.itgLi(fileList,outDir,("{}_{}:gif.gif").format(field_iter,coord),fps) 
+                    self.itgLi(fileList,outDir,("{}_{}:gif.gif").format(field_iter,coord),fps) 
+            
+            ## Make energy graph
             if not(skip_energy):
                 fileList=[]
                 limits = self.gammaRange()
@@ -195,47 +181,48 @@ class fbpic:
                     fileList.append(self.liSaveEnergy(outDir, iter))
                 self.itgLi(fileList, outDir,("{}_energy_gif.gif").format(outDir),fps)
 
+            if not(skip_3d):
+                plotter = pyvista.Plotter(off_screen = True)
+                plotter.set_background([22/255, 6/255, 138/255])
+                fileList = []
+                limits = self.gammaRange()
+                for iter in iterations:
+                    print("Iteration {}: 3D processing.".format(iter+1))
+                    fileList.append(self.view3D(outDir, iter, plotter, show = False))
+                    print("Iteration {}: 3D finished.".format(iter+1))
+                    
+                print("3D gif creation started...")
+                self.itgLi(fileList, outDir,("{}_3D.gif").format(outDir),fps)
+                print("3D gif created sucessfully!")
+                plotter.close()
+                
         elif self.platform == "Windows" or self.platform == "windows":
             for field_iter in fields:
-                print("field  :{}".format(field_iter))
-                if field_iter == "rho" or field_iter == "J":
-                    for coord in ["x"]:
-                        print("coord :{}".format(coord))
-                        max=0
-                        min=0 
-                        for iter in iterations: 
-                            newMinMax = self.saveFig(iter, field_iter, coord, outDir,retMax=True)
-                            if newMinMax[1]>max:
-                                max = newMinMax[1]
-
-                            if newMinMax[0]<min:
-                                min = newMinMax[0]
-
-                        fileList = []
-                        for iter in iterations: 
-                            fileList.append(self.saveFig(iter, field_iter, coord, outDir,norm=self.norm, limits=(min,max))) 
-
-                        self.itgWin(fileList,outDir,("{}_{}-gif.gif").format(field_iter,coord),fps) 
+                print("field :{}".format(field_iter))
+                if not(field_iter == "rho" or field_iter == "J"):
+                    pass
                 else:
-                    for coord in coords:
-                        print("coord :{}".format(coord))
-                        max=0
-                        min=0 
-                        for iter in iterations: 
-                            newMinMax = self.saveFig(iter, field_iter, coord, outDir,retMax=True)
-                            if newMinMax[1]>max:
-                                max = newMinMax[1]
+                    coords = ["x"]
+                    
+                for coord in coords:
+                    print("coord :{}".format(coord))
+                    max=0
+                    min=0 
+                    for iter in iterations: 
+                        newMinMax = self.saveFig(iter, field_iter, coord, outDir,retMax=True)
+                        if newMinMax[1]>max:
+                            max = newMinMax[1]
 
-                            if newMinMax[0]<min:
-                                min = newMinMax[0]
+                        if newMinMax[0]<min:
+                            min = newMinMax[0]
 
-                        print(min,max)
-                        fileList = []
-                        for iter in iterations: 
-                            fileList.append(self.saveFig(iter, field_iter, coord, outDir, norm=self.norm, limits=(min,max))) 
-                        
-                        self.itgWin(fileList,outDir,("{}_{}-gif.gif").format(field_iter,coord),fps) 
-            
+                    print(min,max)
+                    fileList = []
+                    for iter in iterations: 
+                        fileList.append(self.saveFig(iter, field_iter, coord, outDir, norm=self.norm, limits=(min,max))) 
+                    
+                    self.itgWin(fileList,outDir,("{}_{}-gif.gif").format(field_iter,coord),fps) 
+        
             
             if not(skip_energy):
                 fileList = []
@@ -244,10 +231,25 @@ class fbpic:
                     self.electronEnergy([iter],limits)
                     fileList.append(self.winSaveEnergy(outDir, iter))
                 self.itgWin(fileList, outDir,("{}_energy_gif.gif").format(outDir),fps)
-                
+             
+            if not(skip_3d):
+                plotter = pyvista.Plotter(off_screen = True)
+                plotter.set_background([22/255, 6/255, 138/255])
+                fileList = []
+                limits = self.gammaRange()
+                for iter in iterations:
+                    print("Iteration {}: 3D processing.".format(iter+1))
+                    fileList.append(self.view3D(outDir, iter, plotter, show = False))
+                    print("Iteration {}: 3D finished.".format(iter+1))
+                    
+                print("3D gif creation started...")
+                self.itgWin(fileList, outDir,("{}_3D.gif").format(outDir),fps)
+                print("3D gif created sucessfully!")
+                plotter.close()
+                 
         plt.close()
 
-    def saveFig(self,iter,field_iter,coord,outDir,retMax=False,limits = None, norm=None):
+    def saveFig(self, iter, field_iter, coord, outDir, retMax=False, limits = None, norm=None):
         plt.clf()
         plt.gcf()  
         if not(retMax) :  
@@ -267,7 +269,7 @@ class fbpic:
             data, data_info = self.ts.get_field(iteration=iter, field = field_iter, coord = coord, plot=False)
             return (data.min(),data.max())
             
-    def itgLi(self,fileList: list[str],outDir: str,name: str="efault_field_B_timelapt.gif",fps: int = 1) -> None:
+    def itgLi(self,fileList: list[str],outDir: str,name: str="default_field_B_timelapt.gif",fps: int = 1) -> None:
         ## Create a gif folder in the result directory
         if not(os.path.exists(("./{}/gifs").format(outDir))):
             os.mkdir("./{}/gifs".format(outDir))
@@ -277,7 +279,7 @@ class fbpic:
                 image = imageio.imread(nameOfFile)
                 writer.append_data(image)
 
-    def itgWin(self,fileList: list[str],outDir: str,name: str="efault_field_B_timelapt.gif",fps: int = 1) -> None:
+    def itgWin(self,fileList: list[str],outDir: str,name: str="default_field_B_timelapt.gif",fps: int = 1) -> None:
         ## Creating a gif folder in the results directory
         if not(os.path.exists(("{}\\{}\\gifs").format(self.cwd,outDir))):
             os.mkdir(("{}\\{}\\gifs").format(self.cwd,outDir))
@@ -315,13 +317,44 @@ class fbpic:
         plt.close()
         return path
 
+    def view3D(self, outDir: str, iter: int, plotter: pyvista.plotter, show: bool = False, field: str = "rho"):
+        # The theta=None argument constructs a 3D cartesian grid from the cylindrical data
+        rho, meta = self.ts.get_field(field, iteration = iter, theta = None)
+        grid = pyvista.ImageData()
+        grid.dimensions = rho.shape
+        grid.origin = [meta.xmin * 1e6, meta.ymin * 1e6, meta.zmin * 1e6]
+        grid.spacing = [meta.dx * 1e6, meta.dy * 1e6, meta.dz * 1e6]
+        grid.point_data['values'] = -rho.flatten(order='F')
+        
+        plotter.add_volume(grid, clim=(0, 4e6), opacity='geom', cmap='plasma', mapper='smart', show_scalar_bar=True)
+        plotter.camera_position = "yz"
+        plotter.camera.roll -= 90
+        plotter.camera.azimuth = 45
+        plotter.camera.elevation = 20
+        if show == True:
+            plotter.show()
+            
+        if self.platform == "Linux" or self.platform == "linux":
+            filename = "./{}/iter_{}_{}_3D_Render.eps".format(outDir,iter,field)
+        elif self.platform == "Windows" or self.platform == "windows":
+            filename = "{}\\{}\\iter_{}_{}_3D_Render.eps".format(self.cwd,outDir,iter,field)
+        else:
+            raise("Platform not supported")
+        
+        plotter.save_graphic(filename)
+        
+        return filename
+        
+        
+        
+
 series = fbpic(norm = None)
 series.listFields()
-outDir = str(input("Enter a output directory for this run  :"))
-#outDir = "Pulse Length"
-fps = series.size/5
+#outDir = str(input("Enter a output directory for this run  :"))
+outDir = sys.argv[1]
+fps = series.size/7
 print("Gif FPS is {}".format(fps))
-#series.saveFigures(outDir=outDir,coords=["x","y"],fps=fps)
-series.saveFigures(outDir=outDir,fields=[],coords=["x"],fps=fps)
+series.saveFigures(outDir=outDir,fields = [], coords=["x","y"],fps=fps)
+#series.saveFigures(outDir=outDir,fields=[],coords=["x"],fps=fps)
 ##series.electronEnergy(iteration=[950])
 

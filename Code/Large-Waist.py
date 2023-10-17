@@ -18,6 +18,7 @@ where fbpic_object is any of the objects or function of FBPIC.
 # Imports
 # -------
 import numpy as np
+import sys
 from scipy.constants import c, e, m_e
 # Import the relevant structures in FBPIC
 from fbpic.main import Simulation
@@ -30,7 +31,7 @@ from fbpic.openpmd_diag import FieldDiagnostic, ParticleDiagnostic, \
 # Parameters
 # ----------
 # Whether to use the GPU
-use_cuda = True
+use_cuda = False
 
 # Order of the stencil for z derivatives in the Maxwell solver.
 # Use -1 for infinite order, i.e. for exact dispersion relation in
@@ -44,10 +45,10 @@ use_cuda = True
 n_order = -1
 
 # The simulation box
-Nz = 800         # Number of gridpoints along z
+Nz = 2000         # Number of gridpoints along z
 zmax = 30.e-6    # Right end of the simulation box (meters)
 zmin = -30.e-6   # Left end of the simulation box (meters)
-Nr = 50         # Number of gridpoints along r
+Nr = 100         # Number of gridpoints along r
 rmax = 20.e-6    # Length of the box along r (meters)
 Nm = 2           # Number of modes used
 
@@ -70,7 +71,7 @@ v_window = c       # Speed of the window
 
 # The diagnostics and the checkpoints/restarts
 diag_period = 25        # Period of the diagnostics in number of timesteps
-save_checkpoints = False # Whether to write checkpoint files
+save_checkpoints = True # Whether to write checkpoint files
 checkpoint_period = 100  # Period for writing the checkpoints
 use_restart = False      # Whether to restart from a previous checkpoint
 track_electrons = True # Whether to track and write particle ids
@@ -119,11 +120,20 @@ if __name__ == '__main__':
     # The laser
     a0 = 203.e-2          # Laser amplitude
     w0 = 67.e-7       # Laser waist
-    tau = 30.e-15     # Laser duration
+    tau = int(sys.argv[1]).e-15     # Laser duration
     z0 = 15.e-6      # Laser centroid
-    laser_profile = GaussianLaser(a0, w0, tau, z0, zf=ramp_start, )
+    #laser_profile = GaussianLaser(a0, w0, tau, z0, zf=ramp_start, )
     # Add the laser to the fields of the simulation
-    add_laser_pulse( sim, laser_profile)
+    #add_laser_pulse( sim, laser_profile)
+    
+    ## Circularly polarised (their example)
+    linear_profile1 = GaussianLaser( a0/math.sqrt(2), w0, tau, z0,
+                             theta_pol=0., cep_phase=0. )
+    linear_profile2 = GaussianLaser( a0/math.sqrt(2), w0, tau, z0,
+                             theta_pol=math.pi/2, cep_phase=math.pi/2 )
+
+    circular_profile = linear_profile1 + linear_profile2
+    add_laser_pulse( sim, circular_profile )
 
     if use_restart is False:
         # Track electrons if required (species 0 correspond to the electrons)
