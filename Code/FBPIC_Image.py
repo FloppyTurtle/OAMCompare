@@ -291,35 +291,35 @@ class fbpic:
 
     def liSave(self,outDir: str,iter: int,field_iter: str,coord: str,dpi: int=300) -> str:
         ## Save figure in linux
-        path = ("./{}/iter:{}:{}{}.png").format(outDir,iter.item(),field_iter,coord)
+        path = ("./{}/iter:{}:{}{}.png").format(outDir, iter.item(), field_iter, coord)
         plt.savefig(path, dpi=dpi)
         plt.close()
         return path
     
-    def liSaveEnergy(self,outDir: str,iter: int, dpi: int=300) -> str:
-        ## Save figure in linux
-        path = ("./{}/iter:{}:Energy.png").format(outDir,iter.item())
+    def liSaveEnergy(self, outDir: str, iter: int, dpi: int=300) -> str:
+        # Save figure in linux
+        path = ("./{}/iter:{}:Energy.png").format(outDir, iter.item())
         plt.savefig(path, dpi=dpi)
         plt.close()
         return path
 
-    def winSave(self,outDir: str,iter:int ,field_iter: str,coord: str,dpi=300):
-        ## Save figure in windows
+    def winSave(self, outDir: str, iter:int , field_iter: str, coord: str, dpi=300):
+        # Save figure in windows
         path = "{}\\{}\\iter-{}-{}{}.png".format(self.cwd,outDir,iter,field_iter,coord)
         plt.savefig(path, dpi=dpi)
         plt.close()
         return path
     
-    def winSaveEnergy(self,outDir: str,iter:int, dpi=300):
-        ## Save figure in windows
-        path = "{}\\{}\\iter-{}-Energy.png".format(self.cwd,outDir,iter)
+    def winSaveEnergy(self, outDir: str, iter: int, dpi=300):
+        # Save figure in windows
+        path = "{}\\{}\\iter-{}-Energy.png".format(self.cwd, outDir, iter)
         plt.savefig(path, dpi=dpi)
         plt.close()
         return path
 
     def view3D(self, outDir: str, iter: int, plotter: pyvista.plotter, show: bool = False, field: str = "rho"):
         # The theta=None argument constructs a 3D cartesian grid from the cylindrical data
-        rho, meta = self.ts.get_field(field, iteration = iter, theta = None)
+        rho, meta = self.ts.get_field(field, iteration=iter, theta=None)
         grid = pyvista.ImageData()
         grid.dimensions = rho.shape
         grid.origin = [meta.xmin * 1e6, meta.ymin * 1e6, meta.zmin * 1e6]
@@ -331,15 +331,15 @@ class fbpic:
         plotter.camera.roll -= 90
         plotter.camera.azimuth = 45
         plotter.camera.elevation = 20
-        if show == True:
+        if show:
             plotter.show()
             
         if self.platform == "Linux" or self.platform == "linux":
-            filename = "./{}/iter_{}_{}_3D_Render.eps".format(outDir,iter,field)
+            filename = "./{}/iter_{}_{}_3D_Render.eps".format(outDir, iter, field)
         elif self.platform == "Windows" or self.platform == "windows":
-            filename = "{}\\{}\\iter_{}_{}_3D_Render.eps".format(self.cwd,outDir,iter,field)
+            filename = "{}\\{}\\iter_{}_{}_3D_Render.eps".format(self.cwd, outDir, iter, field)
         else:
-            raise("Platform not supported")
+            raise "Platform not supported"
         
         plotter.save_graphic(filename)
         
@@ -348,13 +348,13 @@ class fbpic:
         
         
 
-series = fbpic(norm = None)
+series = fbpic(norm=None)
 series.listFields()
 #outDir = str(input("Enter a output directory for this run  :"))
 outDir = sys.argv[1]
 fps = series.size/7
 print("Gif FPS is {}".format(fps))
-series.saveFigures(outDir=outDir,fields = [], coords=["x","y"],fps=fps,skip_3d = True)
+series.saveFigures(outDir=outDir, fields=[], coords=["x", "y"], fps=fps)
 #series.saveFigures(outDir=outDir,fields=[],coords=["x"],fps=fps)
 ##series.electronEnergy(iteration=[950])
 
