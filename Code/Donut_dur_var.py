@@ -51,7 +51,8 @@ zmax = 30.e-6    # Right end of the simulation box (meters)
 zmin = -30.e-6   # Left end of the simulation box (meters)
 Nr = 100         # Number of gridpoints along r
 rmax = 20.e-6    # Length of the box along r (meters)
-Nm = 2           # Number of modes used
+m = 1            #
+Nm = abs(m) + 1  # Number of modes used
 
 # The simulation timestep
 dt = (zmax-zmin)/Nz/c   # Timestep (seconds)
@@ -138,7 +139,7 @@ if __name__ == '__main__':
     ##circular_profile = linear_profile1 + linear_profile2
     ##add_laser_pulse( sim, circular_profile )
     
-    donut_laser_profile = DonutLikeLaguerreGaussLaser(0, 1,  a0,  w0,      tau,      z0,         zf=ramp_start, lambda0 = 10.e-6)
+    donut_laser_profile = DonutLikeLaguerreGaussLaser(0, m,  a0,  w0,      tau,      z0,         zf=ramp_start, lambda0 = 815.e-9)
                                                     # p  m  amp waist duration centroid focal plane
     add_laser_pulse(sim, donut_laser_profile)
 

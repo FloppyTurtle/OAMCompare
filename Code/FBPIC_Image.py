@@ -354,7 +354,7 @@ series.listFields()
 outDir = sys.argv[1]
 fps = series.size/7
 print("Gif FPS is {}".format(fps))
-series.saveFigures(outDir=outDir,fields = [], coords=["x","y"],fps=fps)
+series.saveFigures(outDir=outDir,fields = [], coords=["x","y"],fps=fps,skip_3d = True)
 #series.saveFigures(outDir=outDir,fields=[],coords=["x"],fps=fps)
 ##series.electronEnergy(iteration=[950])
 
