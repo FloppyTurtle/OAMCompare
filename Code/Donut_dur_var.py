@@ -87,9 +87,9 @@ def dens_func( z, r ) :
     # Allocate relative density
     n = np.ones_like(z)
     # Make linear ramp
-    n = np.where( z<ramp_start+ramp_length, (z-ramp_start)/ramp_length, n )
+    n = np.where(z<ramp_start+ramp_length, (z-ramp_start)/ramp_length, n )
     # Supress density before the ramp
-    n = np.where( z<ramp_start, 0., n )
+    n = np.where(z<ramp_start, 0., n )
     return(n)
 
 # The interaction length of the simulation (meters)

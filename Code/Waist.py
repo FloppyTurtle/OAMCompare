@@ -44,10 +44,10 @@ use_cuda = True
 n_order = -1
 
 # The simulation box
-Nz = 800         # Number of gridpoints along z
+Nz = 1000         # Number of gridpoints along z
 zmax = 30.e-6    # Right end of the simulation box (meters)
 zmin = -30.e-6   # Left end of the simulation box (meters)
-Nr = 50         # Number of gridpoints along r
+Nr = 100         # Number of gridpoints along r
 rmax = 20.e-6    # Length of the box along r (meters)
 Nm = 2           # Number of modes used
 
@@ -84,13 +84,13 @@ def dens_func( z, r ) :
     # Allocate relative density
     n = np.ones_like(z)
     # Make linear ramp
-    n = np.where( z<ramp_start+ramp_length, (z-ramp_start)/ramp_length, n )
+    n = np.where(z < ramp_start+ramp_length, (z-ramp_start)/ramp_length, n )
     # Supress density before the ramp
-    n = np.where( z<ramp_start, 0., n )
-    return(n)
+    n = np.where(z < ramp_start, 0., n )
+    return n
 
 # The interaction length of the simulation (meters)
-L_interact = 200.e-6 # increase to simulate longer distance!
+L_interact = 200.e-6  # increase to simulate longer distance!
 # Interaction time (seconds) (to calculate number of PIC iterations)
 T_interact = ( L_interact + (zmax-zmin) ) / v_window
 # (i.e. the time it takes for the moving window to slide across the plasma)
@@ -119,7 +119,7 @@ if __name__ == '__main__':
     # The laser
     a0 = 203.e-2          # Laser amplitude
     w0 = 67.e-7       # Laser waist
-    tau = 45.e-15     # Laser duration
+    tau = 20.e-15     # Laser duration
     z0 = 15.e-6      # Laser centroid
     laser_profile = GaussianLaser(a0, w0, tau, z0, zf=ramp_start, )
     # Add the laser to the fields of the simulation

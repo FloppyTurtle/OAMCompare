@@ -1,42 +1,48 @@
-import os, platform, subprocess, sys
+import os, platform, subprocess, sys, pyvista, matplotlib
 import imageio.v2 as imageio
 from openpmd_viewer import OpenPMDTimeSeries
-import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 import numpy as np
-import pyvista
+import PIL
+
 
 class fbpic:
-    def __init__(self, relativeInputPath = "/diags/hdf5",norm = None) -> None:
-        ## Find what platform we are on necessary for saving files
+    def __init__(self, relativeInputPath="/diags/hdf5", norm=None) -> None:
+        # Find what platform we are on necessary for saving files
         self.platform = platform.system()
-        if not relativeInputPath:
+        print("fbpic data object created.")
+        print("Platform is {}".format(self.platform))
+        if relativeInputPath == "/diags/hdf5":
+            print("Default file path used, changing based on platform (Linux/Windows).")
             if self.platform == "Linux":
                 relativeInputPath = "/diags/hdf5"
+                print("Platform is Linux hence path is {}".format(relativeInputPath))
             elif self.platform == "Windows":
                 relativeInputPath = "\\diags\\hdf5"
+                print("Platform is Windows hence path is {}".format(relativeInputPath))
 
-        ## Get the data input path and set it
+        # Get the data input path and set it
         self.cwd = os.getcwd()
-        self.inputDataPath =  self.cwd + relativeInputPath
+        self.inputDataPath = self.cwd + relativeInputPath
         self.relativeInputPath = relativeInputPath
         self.norm = norm
-
         self.ts = OpenPMDTimeSeries(self.inputDataPath)
+        print("HDF5 series files found...")
+
         self.it = self.ts.iterations
         self.time_it = self.ts.t
         self.size = self.it.size
-        print("The following iterations are found in the data folder :{}".format(self.it))
-        data, data_info = self.ts.get_field(field=self.ts.avail_fields[0],coord="x",iteration = self.it[0])
+        print("Series includes the iterations :{}".format(self.it))
+        data, data_info = self.ts.get_field(field=self.ts.avail_fields[0], coord="x", iteration=self.it[0])
         self.dims = np.shape(np.array(data))
 
     ## List all avaliable fields
     def listFields(self):
         print(self.ts.avail_fields)
 
-    def electronEnergy(self,iteration:list[int], limits) -> None:
+    def electronEnergy(self, iteration: list[int], limits) -> None:
         plt.clf()
         plt.gcf()
         electronG = np.array(self.ts.get_particle(var_list = ["gamma"], iteration=iteration))
@@ -255,11 +261,13 @@ class fbpic:
         if not(retMax) :  
             if norm == "log":
                 ## Requires no negative nums, since data cannot be changed, cannot modify to fix
-                self.ts.get_field(iteration=iter, field = field_iter, coord = coord, plot=True, norm = colors.LogNorm(vmin=1, vmax = limits[1]))
+                self.ts.get_field(iteration=iter, field=field_iter, coord=coord, plot=True, norm = colors.LogNorm(vmin=1, vmax=limits[1]))
             elif norm == "symLog":
-                self.ts.get_field(iteration=iter, field = field_iter, coord = coord, plot=True, norm = colors.SymLogNorm(linthresh=1,linscale=1,vmin=1, vmax = limits[1]))
+                self.ts.get_field(iteration=iter, field=field_iter, coord = coord, plot=True, norm = colors.SymLogNorm(linthresh=1, linscale=1, vmin=1, vmax=limits[1]))
+            elif norm == "constant":
+                self.ts.get_field(iteration=iter, field=field_iter, coord=coord, plot=True, vmin=limits[0], vmax=limits[1])
             else:
-                self.ts.get_field(iteration=iter, field = field_iter, coord = coord, plot=True, vmin = limits[0], vmax= limits[1] )
+                self.ts.get_field(iteration=iter, field=field_iter, coord=coord, plot=True)
             
             if self.platform == "Linux" or self.platform == "linux":
                 return self.liSave(outDir,iter,field_iter,coord,dpi=300)
@@ -267,30 +275,30 @@ class fbpic:
                 return self.winSave(outDir,iter,field_iter,coord,dpi=300)
         else:
             data, data_info = self.ts.get_field(iteration=iter, field = field_iter, coord = coord, plot=False)
-            return (data.min(),data.max())
+            return data.min(), data.max()
             
-    def itgLi(self,fileList: list[str],outDir: str,name: str="default_field_B_timelapt.gif",fps: int = 1) -> None:
-        ## Create a gif folder in the result directory
-        if not(os.path.exists(("./{}/gifs").format(outDir))):
+    def itgLi(self,fileList: list[str],outDir: str, name: str = "default_field_B_timelapse.gif", fps: int = 1) -> None:
+        # Create a gif folder in the result directory
+        if not(os.path.exists("./{}/gifs".format(outDir))):
             os.mkdir("./{}/gifs".format(outDir))
 
-        with imageio.get_writer(("./{}/gifs/{}").format(outDir,name),mode='I',fps=fps) as writer:
+        with imageio.get_writer("./{}/gifs/{}".format(outDir, name), mode='I', fps=fps) as writer:
             for nameOfFile in fileList:
                 image = imageio.imread(nameOfFile)
                 writer.append_data(image)
 
     def itgWin(self,fileList: list[str],outDir: str,name: str="default_field_B_timelapt.gif",fps: int = 1) -> None:
-        ## Creating a gif folder in the results directory
-        if not(os.path.exists(("{}\\{}\\gifs").format(self.cwd,outDir))):
-            os.mkdir(("{}\\{}\\gifs").format(self.cwd,outDir))
+        # Creating a gif folder in the results directory
+        if not(os.path.exists("{}\\{}\\gifs".format(self.cwd, outDir))):
+            os.mkdir("{}\\{}\\gifs".format(self.cwd, outDir))
         
-        with imageio.get_writer(("{}\\{}\\gifs\\{}").format(self.cwd,outDir,name),mode='I',fps=fps) as writer:
+        with imageio.get_writer("{}\\{}\\gifs\\{}".format(self.cwd, outDir, name), mode='I', fps=fps) as writer:
             for nameOfFile in fileList:
                 image = imageio.imread(nameOfFile)
                 writer.append_data(image)
 
     def liSave(self,outDir: str,iter: int,field_iter: str,coord: str,dpi: int=300) -> str:
-        ## Save figure in linux
+        # Save figure in linux
         path = ("./{}/iter:{}:{}{}.png").format(outDir, iter.item(), field_iter, coord)
         plt.savefig(path, dpi=dpi)
         plt.close()
@@ -331,22 +339,21 @@ class fbpic:
         plotter.camera.roll -= 90
         plotter.camera.azimuth = 45
         plotter.camera.elevation = 20
+        plotter.show_axes()
+
         if show:
             plotter.show()
             
         if self.platform == "Linux" or self.platform == "linux":
-            filename = "./{}/iter_{}_{}_3D_Render.eps".format(outDir, iter, field)
+            filename = "./{}/iter_{}_{}_3D_Render.ps".format(outDir, iter, field)
         elif self.platform == "Windows" or self.platform == "windows":
-            filename = "{}\\{}\\iter_{}_{}_3D_Render.eps".format(self.cwd, outDir, iter, field)
+            filename = "{}\\{}\\iter_{}_{}_3D_Render.ps".format(self.cwd, outDir, iter, field)
         else:
             raise "Platform not supported"
         
         plotter.save_graphic(filename)
         
         return filename
-        
-        
-        
 
 series = fbpic(norm=None)
 series.listFields()
@@ -355,6 +362,4 @@ outDir = sys.argv[1]
 fps = series.size/7
 print("Gif FPS is {}".format(fps))
 series.saveFigures(outDir=outDir, fields=[], coords=["x", "y"], fps=fps)
-#series.saveFigures(outDir=outDir,fields=[],coords=["x"],fps=fps)
-##series.electronEnergy(iteration=[950])
 

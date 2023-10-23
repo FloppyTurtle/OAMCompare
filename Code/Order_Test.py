@@ -18,13 +18,12 @@ where fbpic_object is any of the objects or function of FBPIC.
 # Imports
 # -------
 import numpy as np
-import sys
+import sys, math
 from scipy.constants import c, e, m_e
 # Import the relevant structures in FBPIC
 from fbpic.main import Simulation
 from fbpic.lpa_utils.laser import add_laser_pulse
-
-from fbpic.lpa_utils.laser.laser_profiles import LaguerreGaussLaser
+from fbpic.lpa_utils.laser.laser_profiles import GaussianLaser
 from fbpic.openpmd_diag import FieldDiagnostic, ParticleDiagnostic, \
     set_periodic_checkpoint, restart_from_checkpoint
 
@@ -36,23 +35,23 @@ use_cuda = False
 
 # Order of the stencil for z derivatives in the Maxwell solver.
 # Use -1 for infinite order, i.e. for exact dispersion relation in
-# all direction (advice for single-GPU/single-CPU simulation).
+# all direction (adviced for single-GPU/single-CPU simulation).
 # Use a positive number (and multiple of 2) for a finite-order stencil
 # (required for multi-GPU/multi-CPU with MPI). A large `n_order` leads
 # to more overhead in MPI communications, but also to a more accurate
 # dispersion relation for electromagnetic waves. (Typically,
 # `n_order = 32` is a good trade-off.)
 # See https://arxiv.org/abs/1611.05712 for more information.
-n_order = -1
+print("Order is : {}".format(sys.argv[1]))
+n_order = int(sys.argv[1])
 
 # The simulation box
-Nz = 1000  # Number of grid points along z
+Nz = 1000  # Number of gridpoints along z
 zmax = 30.e-6  # Right end of the simulation box (meters)
 zmin = -30.e-6  # Left end of the simulation box (meters)
-Nr = 200  # Number of grid points along r
+Nr = 100  # Number of gridpoints along r
 rmax = 20.e-6  # Length of the box along r (meters)
-m = 1            #
-Nm = abs(m) + 1  # Number of modes used
+Nm = 2  # Number of modes used
 
 # The simulation timestep
 dt = (zmax - zmin) / Nz / c  # Timestep (seconds)
@@ -71,7 +70,7 @@ v_window = c  # Speed of the window
 
 # The diagnostics and the checkpoints/restarts
 diag_period = 25  # Period of the diagnostics in number of timesteps
-save_checkpoints = False  # Whether to write checkpoint files
+save_checkpoints = True  # Whether to write checkpoint files
 checkpoint_period = 100  # Period for writing the checkpoints
 use_restart = False  # Whether to restart from a previous checkpoint
 track_electrons = True  # Whether to track and write particle ids
@@ -89,7 +88,7 @@ def dens_func(z, r):
     n = np.where(z < ramp_start + ramp_length, (z - ramp_start) / ramp_length, n)
     # Supress density before the ramp
     n = np.where(z < ramp_start, 0., n)
-    return n
+    return (n)
 
 
 # The interaction length of the simulation (meters)
@@ -122,33 +121,14 @@ if __name__ == '__main__':
     # Create a Gaussian laser profile
     # The laser
     a0 = 203.e-2  # Laser amplitude
-    w0 = 30.e-7  # Laser waist
-    tau = 30 * 10 ** -15  # Laser duration
+    w0 = 67.e-7  # Laser waist
+    tau = 20 * 10 ** -15  # Laser duration
     print(tau)
     z0 = 15.e-6  # Laser centroid
-    # laser_profile = GaussianLaser(a0, w0, tau, z0, zf=ramp_start, )
-    # from fbpic.lpa_utils.laser.laser_profiles import GaussianLaser
+    laser_profile = GaussianLaser(a0, w0, tau, z0, zf=ramp_start)
     # Add the laser to the fields of the simulation
-    # add_laser_pulse( sim, laser_profile)
 
-    # Circularly polarised (their example)
-    # from fbpic.lpa_utils.laser.laser_profiles import GaussianLaser
-    # linear_profile1 = GaussianLaser( a0/math.sqrt(2), w0, tau, z0,
-    #                         theta_pol=0., cep_phase=0.)
-    # linear_profile2 = GaussianLaser( a0/math.sqrt(2), w0, tau, z0,
-    #                         theta_pol=math.pi/2, cep_phase=math.pi/2 )
-
-    # circular_profile = linear_profile1 + linear_profile2
-    # add_laser_pulse( sim, circular_profile )
-
-    # from fbpic.lpa_utils.laser import DonutLikeLaguerreGaussLaser
-    # donut_laser_profile = DonutLikeLaguerreGaussLaser(0, 1, a0, w0, tau, z0, zf=ramp_start, lambda0=815.e-9)
-    # p  m  amp waist duration centroid focal plane
-    # add_laser_pulse(sim, donut_laser_profile)
-
-    LagGauss_laser_profile = LaguerreGaussLaser(0, m, a0, w0, tau, z0, zf=ramp_start, lambda0=815.e-9)
-    # p  m  amp waist duration centroid focal plane
-    add_laser_pulse(sim, LagGauss_laser_profile)
+    add_laser_pulse(sim, laser_profile)
 
     if use_restart is False:
         # Track electrons if required (species 0 correspond to the electrons)
@@ -174,6 +154,6 @@ if __name__ == '__main__':
     # Number of iterations to perform
     N_step = int(T_interact / sim.dt)
 
-    # Run the simulation
+    ### Run the simulation
     sim.step(1825)
     print('')

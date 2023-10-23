@@ -46,9 +46,9 @@ use_cuda = False
 n_order = -1
 
 # The simulation box
-Nz =  int(sys.argv[2])  # Number of grid points along z
-zmax = 30.e-6  # Right end of the simulation box (meters)
-zmin = -30.e-6  # Left end of the simulation box (meters)
+Nz = int(sys.argv[2])  # Number of grid points along z
+zmax = 20.e-6  # Right end of the simulation box (meters)
+zmin = -20.e-6  # Left end of the simulation box (meters)
 Nr = int(sys.argv[1])  # Number of grid points along r
 rmax = 20.e-6  # Length of the box along r (meters)
 m = 1            #
@@ -176,5 +176,5 @@ if __name__ == '__main__':
     N_step = int(T_interact / sim.dt)
 
     # Run the simulation
-    sim.step(1000)
+    sim.step(N_step)
     print('')
