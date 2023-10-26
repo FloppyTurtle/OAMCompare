@@ -155,10 +155,12 @@ class fbpic:
         if self.platform == "Linux" or self.platform == "linux":
             for field_iter in fields:
                 print("field  :{}".format(field_iter))
-                if not(field_iter == "rho" or field_iter == "J"):
+                if not (field_iter == "rho" or field_iter == "J"):
                     pass
-                else:
+                elif field_iter == "rho":
                     coords = ["x"]
+                else:
+                    coords = ["z"]
             
                 for coord in coords:
                     print("coord :{}".format(coord))
@@ -205,10 +207,12 @@ class fbpic:
         elif self.platform == "Windows" or self.platform == "windows":
             for field_iter in fields:
                 print("field :{}".format(field_iter))
-                if not(field_iter == "rho" or field_iter == "J"):
+                if not (field_iter == "rho" or field_iter == "J"):
                     pass
-                else:
+                elif field_iter == "rho":
                     coords = ["x"]
+                else:
+                    coords = ["z"]
                     
                 for coord in coords:
                     print("coord :{}".format(coord))
@@ -222,12 +226,12 @@ class fbpic:
                         if newMinMax[0]<min:
                             min = newMinMax[0]
 
-                    print(min,max)
+                    print(min, max)
                     fileList = []
                     for iter in iterations: 
                         fileList.append(self.saveFig(iter, field_iter, coord, outDir, norm=self.norm, limits=(min,max))) 
                     
-                    self.itgWin(fileList,outDir,("{}_{}-gif.gif").format(field_iter,coord),fps) 
+                    self.itgWin(fileList, outDir, ("{}_{}-gif.gif").format(field_iter,coord),fps)
         
             
             if not(skip_energy):
@@ -258,21 +262,21 @@ class fbpic:
     def saveFig(self, iter, field_iter, coord, outDir, retMax=False, limits = None, norm=None):
         plt.clf()
         plt.gcf()  
-        if not(retMax) :  
+        if not (retMax) :
             if norm == "log":
-                ## Requires no negative nums, since data cannot be changed, cannot modify to fix
-                self.ts.get_field(iteration=iter, field=field_iter, coord=coord, plot=True, norm = colors.LogNorm(vmin=1, vmax=limits[1]))
+                # Requires no negative nums, since data cannot be changed, cannot modify to fix
+                self.ts.get_field(iteration=iter, field=field_iter, coord=coord, plot=True, norm=colors.LogNorm(vmin=1, vmax=limits[1]))
             elif norm == "symLog":
-                self.ts.get_field(iteration=iter, field=field_iter, coord = coord, plot=True, norm = colors.SymLogNorm(linthresh=1, linscale=1, vmin=1, vmax=limits[1]))
+                self.ts.get_field(iteration=iter, field=field_iter, coord = coord, plot=True, norm=colors.SymLogNorm(linthresh=1, linscale=1, vmin=1, vmax=limits[1]))
             elif norm == "constant":
                 self.ts.get_field(iteration=iter, field=field_iter, coord=coord, plot=True, vmin=limits[0], vmax=limits[1])
             else:
                 self.ts.get_field(iteration=iter, field=field_iter, coord=coord, plot=True)
             
             if self.platform == "Linux" or self.platform == "linux":
-                return self.liSave(outDir,iter,field_iter,coord,dpi=300)
+                return self.liSave(outDir, iter, field_iter, coord, dpi=300)
             else:
-                return self.winSave(outDir,iter,field_iter,coord,dpi=300)
+                return self.winSave(outDir, iter, field_iter, coord, dpi=300)
         else:
             data, data_info = self.ts.get_field(iteration=iter, field = field_iter, coord = coord, plot=False)
             return data.min(), data.max()
@@ -355,11 +359,17 @@ class fbpic:
         
         return filename
 
+    def side_slice(self, z_val: int):
+        # help(self.ts.get_field)
+        x, x_data = self.ts.get_field(field="rho", slice_across="z", slice_relative_position=z_val, plot=False, iteration=[100], plot_range=[[-15.e-6, 15.e-6], [None, None]])
+        plt.show()
+
 series = fbpic(norm=None)
 series.listFields()
-#outDir = str(input("Enter a output directory for this run  :"))
-outDir = sys.argv[1]
+# outDir = str(input("Enter a output directory for this run  :"))
+# outDir = sys.argv[1]
+outDir = "Test"
 fps = series.size/7
 print("Gif FPS is {}".format(fps))
-series.saveFigures(outDir=outDir, fields=[], coords=["x", "y"], fps=fps)
-
+series.side_slice()
+#series.saveFigures(outDir=outDir, fields=["rho"], particles=[], coords=["x"], fps=fps, just_energy=False, skip_energy=True, just_3d=False, skip_3d=True)
