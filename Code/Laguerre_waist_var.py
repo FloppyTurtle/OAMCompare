@@ -32,7 +32,7 @@ from fbpic.openpmd_diag import FieldDiagnostic, ParticleDiagnostic, \
 # Parameters
 # ----------
 # Whether to use the GPU
-use_cuda = False
+use_cuda = True
 
 # Order of the stencil for z derivatives in the Maxwell solver.
 # Use -1 for infinite order, i.e. for exact dispersion relation in
@@ -43,13 +43,13 @@ use_cuda = False
 # dispersion relation for electromagnetic waves. (Typically,
 # `n_order = 32` is a good trade-off.)
 # See https://arxiv.org/abs/1611.05712 for more information.
-n_order = -1
+n_order = 32
 
 # The simulation box
 Nz = 1000  # Number of grid points along z
 zmax = 30.e-6  # Right end of the simulation box (meters)
 zmin = -30.e-6  # Left end of the simulation box (meters)
-Nr = 200  # Number of grid points along r
+Nr = 500  # Number of grid points along r
 rmax = 20.e-6  # Length of the box along r (meters)
 m = 1            #
 Nm = abs(m) + 1  # Number of modes used
@@ -122,7 +122,7 @@ if __name__ == '__main__':
     # Create a Gaussian laser profile
     # The laser
     a0 = 203.e-2  # Laser amplitude
-    w0 = float(sys.argv[1]) * 10 ** -7  # Laser waist
+    w0 = float(sys.argv[1]) * 10 ** -6  # Laser waist
     tau = 30.e-15  # Laser duration
     print(w0)
     z0 = 15.e-6  # Laser centroid

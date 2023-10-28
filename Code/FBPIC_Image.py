@@ -1,11 +1,27 @@
-import os, platform, subprocess, sys, pyvista, matplotlib
+import os, platform, subprocess, sys, pyvista, matplotlib, tkinter
 import imageio.v2 as imageio
 from openpmd_viewer import OpenPMDTimeSeries
-matplotlib.use('TkAgg')
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 import numpy as np
 import PIL
+
+def main():
+    print("Starting FBPIC_Image.py")
+    series = fbpic(norm=None)
+    print("Files Loaded.")
+    series.listFields()
+    # outDir = str(input("Enter a output directory for this run  :"))
+    # outDir = sys.argv[1]
+    outDir = "500_2000_Laguerre_Gaussian"
+    print("Output directory is {}".format(outDir))
+
+    fps = series.size/7
+    print("Gif FPS is {}".format(fps))
+
+    #series.side_slice()
+    series.saveFigures(outDir=outDir, fields=[], particles=[], coords=["x","y"], fps=fps, just_energy=False, skip_energy=False, just_3d=False, skip_3d=False)
 
 
 class fbpic:
@@ -197,6 +213,7 @@ class fbpic:
                 for iter in iterations:
                     print("Iteration {}: 3D processing.".format(iter+1))
                     fileList.append(self.view3D(outDir, iter, plotter, show = False))
+                    plotter.deep_clean()
                     print("Iteration {}: 3D finished.".format(iter+1))
                     
                 print("3D gif creation started...")
@@ -250,6 +267,7 @@ class fbpic:
                 for iter in iterations:
                     print("Iteration {}: 3D processing.".format(iter+1))
                     fileList.append(self.view3D(outDir, iter, plotter, show = False))
+                    plotter.deep_clean()
                     print("Iteration {}: 3D finished.".format(iter+1))
                     
                 print("3D gif creation started...")
@@ -364,12 +382,9 @@ class fbpic:
         x, x_data = self.ts.get_field(field="rho", slice_across="z", slice_relative_position=z_val, plot=False, iteration=[100], plot_range=[[-15.e-6, 15.e-6], [None, None]])
         plt.show()
 
-series = fbpic(norm=None)
-series.listFields()
-# outDir = str(input("Enter a output directory for this run  :"))
-# outDir = sys.argv[1]
-outDir = "Test"
-fps = series.size/7
-print("Gif FPS is {}".format(fps))
-series.side_slice()
-#series.saveFigures(outDir=outDir, fields=["rho"], particles=[], coords=["x"], fps=fps, just_energy=False, skip_energy=True, just_3d=False, skip_3d=True)
+
+
+print("Starting")
+if __name__ == "__main__":
+    print("Inside starting")
+    main()
