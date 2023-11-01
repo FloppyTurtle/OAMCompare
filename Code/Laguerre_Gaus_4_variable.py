@@ -18,7 +18,7 @@ where fbpic_object is any of the objects or function of FBPIC.
 # Imports
 # -------
 import numpy as np
-import sys
+import sys, os
 from scipy.constants import c, e, m_e
 # Import the relevant structures in FBPIC
 from fbpic.main import Simulation
@@ -46,10 +46,10 @@ use_cuda = True
 n_order = 32
 
 # The simulation box
-Nz = 1000  # Number of grid points along z
+Nz = 3000  # Number of grid points along z
 zmax = 30.e-6  # Right end of the simulation box (meters)
 zmin = -30.e-6  # Left end of the simulation box (meters)
-Nr = 500  # Number of grid points along r
+Nr = 300  # Number of grid points along r
 rmax = 20.e-6  # Length of the box along r (meters)
 m = 1            #
 Nm = abs(m) + 1  # Number of modes used
@@ -121,11 +121,10 @@ if __name__ == '__main__':
     # Load initial fields
     # Create a Gaussian laser profile
     # The laser
-    a0 = 203.e-2  # Laser amplitude
-    w0 = float(sys.argv[1]) * 10 ** -6  # Laser waist
-    tau = 30.e-15  # Laser duration
-    print(w0)
-    z0 = 15.e-6  # Laser centroid
+    a0  = float(sys.argv[1]) * 10 ** -1  # Laser amplitude   2.03
+    w0  = float(sys.argv[2]) * 10 ** -7  # Laser waist       10 microns
+    tau = float(sys.argv[3]) * 10 ** -15  # Laser duration   30 fs
+    z0  = float(sys.argv[4]) * 10 ** -6  # Laser centroid    15 microns
     # laser_profile = GaussianLaser(a0, w0, tau, z0, zf=ramp_start, )
     # from fbpic.lpa_utils.laser.laser_profiles import GaussianLaser
     # Add the laser to the fields of the simulation
@@ -164,7 +163,11 @@ if __name__ == '__main__':
     sim.set_moving_window(v=v_window)
 
     # Add diagnostics
-    sim.diags = [FieldDiagnostic(diag_period, sim.fld, comm=sim.comm),
+
+    os.mkdir("{}/{}".format(os.getcwd(),str(sys.argv[5])))
+    data_dir = "{}/{}".format(os.getcwd(),str(sys.argv[5]))
+    os.mkdir(data_dir)
+    sim.diags = [FieldDiagnostic(diag_period, sim.fld, comm=sim.comm, write_dir = data_dir ),
                  ParticleDiagnostic(diag_period, {"electrons": elec},
                                     select={"uz": [1.0, None]}, comm=sim.comm,
                                     particle_data=["gamma", "position", "weighting"])]
@@ -177,5 +180,5 @@ if __name__ == '__main__':
     N_step = int(T_interact / sim.dt)
 
     # Run the simulation
-    sim.step(1825)
+    sim.step(N_step)
     print('')

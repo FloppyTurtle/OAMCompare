@@ -1,30 +1,8 @@
-print("Importing required classes...")
-
-import os, platform, subprocess, sys, pyvista, matplotlib, tkinter, PIL
+import os, sys, numpy, pyvista, platform
 import imageio.v2 as imageio
 from openpmd_viewer import OpenPMDTimeSeries
-##matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
-import numpy as np
-
-print("Finished! \n")
-def main():
-    print("Starting FBPIC_Image.py")
-    series = fbpic(norm=None)
-    print("Files Loaded.")
-    series.listFields()
-    # outDir = str(input("Enter a output directory for this run  :"))
-    # outDir = sys.argv[1]
-    outDir = "500_2000_Laguerre_Gaussian"
-    print("Output directory is {}".format(outDir))
-
-    fps = series.size/7
-    print("Gif FPS is {}".format(fps))
-
-    #series.side_slice()
-    series.saveFigures(outDir=outDir, fields=[], particles=[], coords=["x","y"], fps=fps, just_energy=False, skip_energy=False, just_3d=False, skip_3d=False)
-
 
 class fbpic:
     def __init__(self, relativeInputPath="/diags/hdf5", norm=None) -> None:
@@ -54,7 +32,7 @@ class fbpic:
         self.size = self.it.size
         print("Series includes the iterations :{}".format(self.it))
         data, data_info = self.ts.get_field(field=self.ts.avail_fields[0], coord="x", iteration=self.it[0])
-        self.dims = np.shape(np.array(data))
+        self.dims = numpy.shape(numpy.array(data))
 
     ## List all avaliable fields
     def listFields(self):
@@ -63,9 +41,9 @@ class fbpic:
     def electronEnergy(self, iteration: list[int], limits) -> None:
         plt.clf()
         plt.gcf()
-        electronG = np.array(self.ts.get_particle(var_list = ["gamma"], iteration=iteration))
-        electronW = np.array(self.ts.get_particle(var_list = ["w"], iteration=iteration))
-        electronZ = np.array(self.ts.get_particle(var_list = ["z"], iteration=iteration))
+        electronG = numpy.array(self.ts.get_particle(var_list = ["gamma"], iteration=iteration))
+        electronW = numpy.array(self.ts.get_particle(var_list = ["w"], iteration=iteration))
+        electronZ = numpy.array(self.ts.get_particle(var_list = ["z"], iteration=iteration))
 
         try:
             minz = electronZ[0].min()
@@ -82,7 +60,7 @@ class fbpic:
             maxG = electronG[0].max()
             maxW = electronW[0].max()
 
-        ymax = np.ceil(limits[1])+1
+        ymax = numpy.ceil(limits[1])+1
         fig, ax = plt.subplots()
         data_array, xedges, yedges, quadmesh  = ax.hist2d(electronZ[0], electronG[0], weights = electronW[0],
                                                            bins=(self.dims[1],self.dims[0]), range = [[minz,maxz],[1,ymax]], norm = colors.LogNorm(vmin = 0.0001, vmax = maxW),
@@ -97,14 +75,14 @@ class fbpic:
         fig.colorbar(quadmesh, ax=ax)
         
         plt.axhline(y=maxG,color="r",linestyle="-")
-        time = self.time_it[np.where(self.it == iteration[0])[0][0]]
-        plt.title("Gamma in the mode {} at {}{} (iteration {})".format("all",np.round(time*10**15,1),"$e^{-15}$",iteration[0]))
+        time = self.time_it[numpy.where(self.it == iteration[0])[0][0]]
+        plt.title("Gamma in the mode {} at {}{} (iteration {})".format("all",numpy.round(time*10**15,1),"$e^{-15}$",iteration[0]))
 
     def gammaRange(self):
         max = 1
-        min = np.inf
+        min = numpy.inf
         for iter in self.it:
-            electronG = np.array(self.ts.get_particle(var_list = ["gamma"],iteration=iter))
+            electronG = numpy.array(self.ts.get_particle(var_list = ["gamma"],iteration=iter))
             try:
                 newMax = electronG[0].max()
                 newMin = electronG[0].min()
@@ -123,18 +101,18 @@ class fbpic:
 
         if abs(min)< 1:
             y_error = abs(newMin)
-            order = np.log10(y_error)
-            order = np.floor(float(order))
-            error = np.round(y_error*0.511,-int(order-1))
-            bMax = np.round(max*0.511,-int(order-1))
+            order = numpy.log10(y_error)
+            order = numpy.floor(float(order))
+            error = numpy.round(y_error*0.511,-int(order-1))
+            bMax = numpy.round(max*0.511,-int(order-1))
         else:
             y_error = 0.01*max
-            order = np.log10(y_error)
-            order = np.floor(float(order))
-            error = np.round(y_error*0.511,-int(order-1))
-            bMax = np.round(max*0.511,-int(order-1))
+            order = numpy.log10(y_error)
+            order = numpy.floor(float(order))
+            error = numpy.round(y_error*0.511,-int(order-1))
+            bMax = numpy.round(max*0.511,-int(order-1))
         print(("Max Gamma is {} with a total energy of {}±{} GeV").format(max,bMax,error))
-        if min == np.inf:
+        if min == numpy.inf:
             min = 0
         return (min,max)
 
@@ -152,7 +130,7 @@ class fbpic:
         ## Create the result directory
         if self.platform == "Linux" or self.platform == "linux":
             if not(os.path.isdir(self.cwd+"/"+outDir)):
-                subprocess.run(["mkdir", outDir])
+                os.mkdir(self.cwd+"/"+outDir)
         else:
             if not(os.path.isdir(self.cwd+"\\"+outDir)):
                 os.mkdir(self.cwd+"\\"+outDir)
@@ -196,7 +174,7 @@ class fbpic:
                     for iter in iterations: 
                         fileList.append(self.saveFig(iter, field_iter, coord, outDir, norm=self.norm, limits=(min,max))) 
 
-                    self.itgLi(fileList,outDir,("{}_{}:gif.gif").format(field_iter,coord),fps) 
+                    self.itgLi(fileList,outDir,("{}_{}_gif.gif").format(field_iter,coord),fps) 
             
             ## Make energy graph
             if not(skip_energy):
@@ -325,7 +303,7 @@ class fbpic:
 
     def liSave(self,outDir: str,iter: int,field_iter: str,coord: str,dpi: int=300) -> str:
         # Save figure in linux
-        path = ("./{}/iter:{}:{}{}.png").format(outDir, iter.item(), field_iter, coord)
+        path = ("./{}/iter_{}_{}{}.png").format(outDir, iter.item(), field_iter, coord)
         plt.savefig(path, dpi=dpi)
         plt.close()
         return path
@@ -386,7 +364,30 @@ class fbpic:
         x, x_data = self.ts.get_field(field="rho", slice_across="z", slice_relative_position=z_val, plot=False, iteration=[100], plot_range=[[-15.e-6, 15.e-6], [None, None]])
         plt.show()
 
-print("Starting")
+
+
+def main():
+    outDir = sys.argv[1]
+    ##outDir = "500_2000_Laguerre_Gaussian"
+    print("Output directory is {}".format(outDir))
+
+    print("Loading data files...")
+    series = fbpic(norm=None, relativeInputPath = "/"+outDir+"/data")
+    print("Files loaded!")
+    series.listFields()
+
+    fps = series.size/7
+    print("Gif FPS is {}".format(fps))
+
+    print("Saving figures and creating gifs...")
+    # PYVISTA DOES NOT WORK CURRENTLY!!!
+    series.saveFigures(outDir=outDir, fields=[], particles=[], coords=["x","y"], fps=fps, just_energy=False, skip_energy=False, just_3d=False, skip_3d=True)
+    print("Finished!")
+
+
 if __name__ == "__main__":
-    print("Inside starting")
+    print("Running FBPIC_Image_Viking.py")
+    print("Entering Main()...")
     main()
+    print("Exiting Main()...")
+    print("Finished!")
