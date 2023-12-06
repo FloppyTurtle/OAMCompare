@@ -20,8 +20,6 @@ echo Running job on host:
 echo -e '\t'`hostname` at `date`
 echo
 
-
-
 export MPLBACKEND=TKAgg
 export OMP_NUM_THREADS=8
 export MKL_NUM_THREADS=8
@@ -31,26 +29,23 @@ export FBPIC_ENABLE_GPUDIRECT=1
 module load Miniconda3
 source activate OAM
 
-module load Python/3.11.3-GCCcore-12.3.0
 module load CUDA/12.2.2
-module load MPICH/3.4.2-GCC-10.3.0
-
+module load OpenMPI/4.1.5-GCC-12.3.0
+module load Python/3.11.3-GCCcore-12.3.0
 
 : << 'END'
 END
-max=2
+max=40
 
-for (( i=32; i >= $max; i=i/2 ))
+for (( i=15; i < $max; i=i+5 ))
 do
     echo "$i"
+    PATH=Laguerre_Gaussian_dur_$i
     echo Starting FBPIC run...
-    PATH=Gaussian_NCR_test_${i}
-    python_environments/envs/OAM/bin/python3.11 OAMCompare/Code/NCR_test.py 4.0 6.7 20 15 $PATH ${i}
-    cp "OAMCompare/Code/Batch_Jobs/OAM_Slurm.sh" $PATH
+    python_environments/envs/OAM/bin/python3.11 OAMCompare/Code/Laguerre_Gaus_4_variable.py 4 7.5 $i 15 $PATH
     echo Finished the simulation
     echo Starting processing 
     python_environments/envs/OAM/bin/python3.11 -X importtime OAMCompare/Code/FBPIC_Image_Viking.py $PATH
-    echo after python
 done
 
 

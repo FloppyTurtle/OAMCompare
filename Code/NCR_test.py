@@ -43,7 +43,7 @@ use_cuda = True
 # dispersion relation for electromagnetic waves. (Typically,
 # `n_order = 32` is a good trade-off.)
 # See https://arxiv.org/abs/1611.05712 for more information.
-n_order = 32
+n_order = int(sys.argv[6])
 
 # The simulation box
 Nz = 3000  # Number of grid points along z
@@ -70,7 +70,7 @@ p_nt = 4  # Number of particles per cell along theta
 v_window = c  # Speed of the window
 
 # The diagnostics and the checkpoints/restarts
-diag_period = 100  # Period of the diagnostics in number of timesteps
+diag_period = 25  # Period of the diagnostics in number of timesteps
 save_checkpoints = False  # Whether to write checkpoint files
 checkpoint_period = 100  # Period for writing the checkpoints
 use_restart = False  # Whether to restart from a previous checkpoint
@@ -95,8 +95,7 @@ def dens_func(z, r):
 # The interaction length of the simulation (meters)
 L_interact = 50.e-6  # increase to simulate longer distance!
 # Interaction time (seconds) (to calculate number of PIC iterations)
-T_interact = 365.e-15
-# T_interact = ( L_interact + (zmax-zmin) ) / v_window
+T_interact = ( L_interact + (zmax-zmin) ) / v_window
 # (i.e. the time it takes for the moving window to slide across the plasma)
 
 # ---------------------------
@@ -121,14 +120,15 @@ if __name__ == '__main__':
     # Load initial fields
     # Create a Gaussian laser profile
     # The laser
-    a0  = float(sys.argv[1])   # Laser amplitude   2.03
+    a0  = float(sys.argv[1])  # Laser amplitude   2.03
     w0  = float(sys.argv[2]) * 10 ** -6  # Laser waist       10 microns
     tau = float(sys.argv[3]) * 10 ** -15  # Laser duration   30 fs
     z0  = float(sys.argv[4]) * 10 ** -6  # Laser centroid    15 microns
-    # laser_profile = GaussianLaser(a0, w0, tau, z0, zf=ramp_start, )
-    # from fbpic.lpa_utils.laser.laser_profiles import GaussianLaser
+
+    from fbpic.lpa_utils.laser.laser_profiles import GaussianLaser
+    laser_profile = GaussianLaser(a0, w0, tau, z0, zf=ramp_start, )
     # Add the laser to the fields of the simulation
-    # add_laser_pulse( sim, laser_profile)
+    add_laser_pulse( sim, laser_profile)
 
     # Circularly polarised (their example)
     # from fbpic.lpa_utils.laser.laser_profiles import GaussianLaser
@@ -140,14 +140,16 @@ if __name__ == '__main__':
     # circular_profile = linear_profile1 + linear_profile2
     # add_laser_pulse( sim, circular_profile )
 
-    # from fbpic.lpa_utils.laser import DonutLikeLaguerreGaussLaser
-    # donut_laser_profile = DonutLikeLaguerreGaussLaser(0, m, a0, w0, tau, z0, zf=ramp_start, lambda0=815.e-9)
+    ##from fbpic.lpa_utils.laser import DonutLikeLaguerreGaussLaser
+    ##donut_laser_profile = DonutLikeLaguerreGaussLaser(0, m, a0, w0, tau, z0, zf=ramp_start, lambda0=815.e-9)
     # p  m  amp waist duration centroid focal plane
-    # add_laser_pulse(sim, donut_laser_profile)
+    ##add_laser_pulse(sim, donut_laser_profile)
 
-    LagGauss_laser_profile = LaguerreGaussLaser(0, m, a0, w0, tau, z0, zf=ramp_start, lambda0=815.e-9)
+    
+
+    #LagGauss_laser_profile = LaguerreGaussLaser(0, m, a0, w0, tau, z0, zf=ramp_start, lambda0=815.e-9)
     # p  m  amp waist duration centroid focal plane
-    add_laser_pulse(sim, LagGauss_laser_profile)
+    #add_laser_pulse(sim, LagGauss_laser_profile)
 
     w_p = np.sqrt(4*np.pi*(n_e * (16.e-20)**2)/(911.e-33))
 
@@ -171,7 +173,7 @@ if __name__ == '__main__':
         raise FileExistsError("Folder already exists! Rename old or move it somewhere safe!")
     finally:
         sim.diags = [FieldDiagnostic(diag_period, sim.fld, comm=sim.comm, write_dir = data_dir),
-                 ParticleDiagnostic(diag_period, {"electrons": elec}, comm=sim.comm, write_dir = data_dir,
+                 ParticleDiagnostic(diag_period, {"electrons": elec}, comm=sim.comm, write_dir = data_dir, 
                                     particle_data=["gamma", "position", "weighting"])]
 
     # Add checkpoints

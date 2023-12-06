@@ -93,7 +93,7 @@ def dens_func(z, r):
 
 
 # The interaction length of the simulation (meters)
-L_interact = 50.e-6  # increase to simulate longer distance!
+L_interact = 100.e-6  # increase to simulate longer distance!
 # Interaction time (seconds) (to calculate number of PIC iterations)
 T_interact = 365.e-15
 # T_interact = ( L_interact + (zmax-zmin) ) / v_window
@@ -121,14 +121,16 @@ if __name__ == '__main__':
     # Load initial fields
     # Create a Gaussian laser profile
     # The laser
-    a0  = float(sys.argv[1])   # Laser amplitude   2.03
-    w0  = float(sys.argv[2]) * 10 ** -6  # Laser waist       10 microns
+    a0  = float(sys.argv[1]) * 10 ** -1  # Laser amplitude   2.03
+    w0  = float(sys.argv[2]) * 10 ** -7  # Laser waist       10 microns
     tau = float(sys.argv[3]) * 10 ** -15  # Laser duration   30 fs
     z0  = float(sys.argv[4]) * 10 ** -6  # Laser centroid    15 microns
-    # laser_profile = GaussianLaser(a0, w0, tau, z0, zf=ramp_start, )
-    # from fbpic.lpa_utils.laser.laser_profiles import GaussianLaser
+
+    
+    from fbpic.lpa_utils.laser.laser_profiles import GaussianLaser
+    laser_profile = GaussianLaser(a0, w0, tau, z0, zf=ramp_start )
     # Add the laser to the fields of the simulation
-    # add_laser_pulse( sim, laser_profile)
+    add_laser_pulse( sim, laser_profile)
 
     # Circularly polarised (their example)
     # from fbpic.lpa_utils.laser.laser_profiles import GaussianLaser
@@ -145,9 +147,9 @@ if __name__ == '__main__':
     # p  m  amp waist duration centroid focal plane
     # add_laser_pulse(sim, donut_laser_profile)
 
-    LagGauss_laser_profile = LaguerreGaussLaser(0, m, a0, w0, tau, z0, zf=ramp_start, lambda0=815.e-9)
+    ##LagGauss_laser_profile = LaguerreGaussLaser(0, m, a0, w0, tau, z0, zf=ramp_start, lambda0=815.e-9)
     # p  m  amp waist duration centroid focal plane
-    add_laser_pulse(sim, LagGauss_laser_profile)
+    ##add_laser_pulse(sim, LagGauss_laser_profile)
 
     w_p = np.sqrt(4*np.pi*(n_e * (16.e-20)**2)/(911.e-33))
 
